@@ -1,9 +1,15 @@
 const path = require('path')
+// Convert ES2015 with buble. https://npm.taobao.org/package/rollup-plugin-buble
 const buble = require('rollup-plugin-buble')
+// Define aliases when bundling packages with Rollup  https://npm.taobao.org/package/rollup-plugin-alias
 const alias = require('rollup-plugin-alias')
+// Convert CommonJS modules to ES6, so they can be included in a Rollup bundle
 const cjs = require('rollup-plugin-commonjs')
+// Replace strings in files while bundling them.
 const replace = require('rollup-plugin-replace')
+// Locate modules using the Node resolution algorithm, for using third party modules in node_modules
 const node = require('rollup-plugin-node-resolve')
+// 去掉flow使用的类型检查代码
 const flow = require('rollup-plugin-flow-no-whitespace')
 const version = process.env.VERSION || require('../package.json').version
 const weexVersion = process.env.WEEX_VERSION || require('../packages/weex-vue-framework/package.json').version
@@ -26,10 +32,15 @@ const weexFactoryPlugin = {
 
 const aliases = require('./alias')
 const resolve = p => {
+  // web/entry-runtime.js => web
   const base = p.split('/')[0]
+  // {web: resolve('src/platforms/web'}
   if (aliases[base]) {
+    // xxxx/xxx/src/platforms/web/ + entry-runtime.js
     return path.resolve(aliases[base], p.slice(base.length + 1))
   } else {
+    // 从相对路径去获得entry的路径 => 处理dist的情况
+    // dist/vue.runtime.common.js 创建新的路径，并输出到文件夹中
     return path.resolve(__dirname, '../', p)
   }
 }
@@ -168,9 +179,16 @@ const builds = {
   }
 }
 
+/**
+ * 获取config的名字
+ * @param name
+ * @returns {{input: *, external: string[] | ExternalOption | * | external | boolean | number | External, plugins: *[], output: {file: (*|string), format: *, banner: (string|BannerPluginArgument|*|AddonHook|(() => (string | Promise<string>))), name: (string|*)}, onwarn: onwarn}}
+ */
 function genConfig (name) {
+  // 'web-full-dev => {}
   const opts = builds[name]
   const config = {
+    sourceMap: true,
     input: opts.entry,
     external: opts.external,
     plugins: [
@@ -180,8 +198,8 @@ function genConfig (name) {
         __VERSION__: version
       }),
       flow(),
-      buble(),
-      alias(Object.assign({}, aliases, opts.alias))
+      buble(), // ES6=> ES5转换
+      alias(Object.assign({}, aliases, opts.alias)) //
     ].concat(opts.plugins || []),
     output: {
       file: opts.dest,
@@ -195,6 +213,30 @@ function genConfig (name) {
       }
     }
   }
+  // console.log(config,'replace','\n')
+  // console.log(replace({
+  //   __WEEX__: !!opts.weex,
+  //   __WEEX_VERSION__: weexVersion,
+  //   __VERSION__: version
+  // }))
+  // console.log(flow())
+
+  // { sourceMap: true,
+  //   input: 'C:\\Users\\chenlumin\\Desktop\\git\\vue\\src\\platforms\\web\\entry-runtime-with-compiler.js',
+  //   external: undefined,
+  //   plugins:
+  //   [ { name: 'replace', transform: [Function: transform] },
+  //   { name: 'flow-remove-types', transform: [Function: transform] },
+  //   { name: 'buble', transform: [Function: transform] },
+  //   { resolveId: [Function: resolveId] } ],
+  //   output:
+  //   { file: 'C:\\Users\\chenlumin\\Desktop\\git\\vue\\dist\\vue.js',
+  //     format: 'umd',
+  //     banner: '/*!\n * Vue.js v2.5.17-beta.0\n * (c) 2014-2018 Evan You\n * Released under the MIT License.\n */',
+  //     name: 'Vue' },
+  //   onwarn: [Function: onwarn] } 'replace' '\n'
+  // { name: 'replace', transform: [Function: transform] }
+  // { name: 'flow-remove-types', transform: [Function: transform] }
 
   if (opts.env) {
     config.plugins.push(replace({
@@ -206,11 +248,13 @@ function genConfig (name) {
     enumerable: false,
     value: name
   })
+  // config.__name = web-full-dev
 
   return config
 }
 
 if (process.env.TARGET) {
+  // 返回config
   module.exports = genConfig(process.env.TARGET)
 } else {
   exports.getBuild = genConfig
