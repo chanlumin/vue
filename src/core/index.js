@@ -20,7 +20,8 @@ Object.defineProperty(Vue.prototype, '$ssrContext', {
 Object.defineProperty(Vue, 'FunctionalRenderContext', {
   value: FunctionalRenderContext
 })
-
+// scripts/config.js 文件，在rollup 的 replace的 genConfig 方法=>有__VERSION__: version。
+// 最终__VERSION__ 将被 version 的值替换，version 的值就是 Vue 的版本号
 Vue.version = '__VERSION__'
 
 export default Vue

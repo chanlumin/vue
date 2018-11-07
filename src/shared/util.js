@@ -1,27 +1,33 @@
 /* @flow */
 
+
+// https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Object/freeze
+// 返回一个被冻结的对象，被冻结的对象不能进行属性添加和修改
 export const emptyObject = Object.freeze({})
 
 // These helpers produce better VM code in JS engines due to their
 // explicitness and function inlining.
+// 判断值是否未定义 用来判断真值在if判断中 会被flow抛出错误 所以需要加checks
+// https://flow.org/en/docs/types/functions/ predicate function
 export function isUndef (v: any): boolean %checks {
   return v === undefined || v === null
 }
-
+// 判断值有定义
 export function isDef (v: any): boolean %checks {
   return v !== undefined && v !== null
 }
-
+// 判断是否为true
 export function isTrue (v: any): boolean %checks {
   return v === true
 }
-
+// 判断是否为false
 export function isFalse (v: any): boolean %checks {
   return v === false
 }
 
 /**
  * Check if value is primitive.
+ * 判断是否为原始类型=>除去了 Object Null Undefined
  */
 export function isPrimitive (value: any): boolean %checks {
   return (
@@ -35,6 +41,9 @@ export function isPrimitive (value: any): boolean %checks {
 
 /**
  * Quick object check - this is primarily used to tell
+ * https://flow.org/en/docs/types/mixed/
+ * mixed类型允许让你传入任何类型的变量, 但是你自己知道并且判断
+ * 这个变量的类型 flow才不会给你报错
  * Objects from primitive values when we know the value
  * is a JSON-compliant type.
  */
@@ -47,6 +56,11 @@ export function isObject (obj: mixed): boolean %checks {
  */
 const _toString = Object.prototype.toString
 
+/**
+ * 获取元素的数据类型 "[object String]" => "String"
+ * @param value
+ * @returns {string}
+ */
 export function toRawType (value: any): string {
   return _toString.call(value).slice(8, -1)
 }
@@ -54,17 +68,25 @@ export function toRawType (value: any): string {
 /**
  * Strict object type check. Only returns true
  * for plain JavaScript objects.
+ * 是否是纯对象
  */
 export function isPlainObject (obj: any): boolean {
   return _toString.call(obj) === '[object Object]'
 }
 
+/**
+ * 是否是正则对象
+ * @param 传入任何值
+ * @returns {boolean} 返回Boolean值
+ */
 export function isRegExp (v: any): boolean {
   return _toString.call(v) === '[object RegExp]'
 }
 
 /**
  * Check if val is a valid array index.
+ * 判断是否是一个 有效的数组下标索引
+ * 大于0 整数， 数值有限
  */
 export function isValidArrayIndex (val: any): boolean {
   const n = parseFloat(String(val))
@@ -72,6 +94,8 @@ export function isValidArrayIndex (val: any): boolean {
 }
 
 /**
+ * https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/JSON/stringify
+ * JSON.stringify(val, null, 2)  => 第二个参数未传入 表示序列化所有的属性, 第三个参数表示缩进的字符串是2
  * Convert a value to a string that is actually rendered.
  */
 export function toString (val: any): string {
@@ -85,6 +109,8 @@ export function toString (val: any): string {
 /**
  * Convert an input value to a number for persistence.
  * If the conversion fails, return original string.
+ * 将String类型的变量转换成数值型，如果不是数值型的话
+ * 直接返回原对象
  */
 export function toNumber (val: string): number | string {
   const n = parseFloat(val)
@@ -94,6 +120,11 @@ export function toNumber (val: string): number | string {
 /**
  * Make a map and return a function for checking if a key
  * is in that map.
+ * const isIn = Vue._makeMap('a,b,c',true)
+ * isIn('a')
+ * 第二个参数如果是true的话，那么返回的函数的参数将统一做小写字母转换
+ * 实现一个Map，并且， 返回一个函数接受一个参数
+ * 传入一个参数 判断这个参数是否在这个Map里面
  */
 export function makeMap (
   str: string,
@@ -111,6 +142,7 @@ export function makeMap (
 
 /**
  * Check if a tag is a built-in tag.
+ *
  */
 export const isBuiltInTag = makeMap('slot,component', true)
 

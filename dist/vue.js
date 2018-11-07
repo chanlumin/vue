@@ -11,28 +11,34 @@
 
   /*  */
 
+
+  // https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Object/freeze
+  // 返回一个被冻结的对象，被冻结的对象不能进行属性添加和修改
   var emptyObject = Object.freeze({});
 
   // These helpers produce better VM code in JS engines due to their
   // explicitness and function inlining.
+  // 判断值是否未定义 用来判断真值在if判断中 会被flow抛出错误 所以需要加checks
+  // https://flow.org/en/docs/types/functions/ predicate function
   function isUndef (v) {
     return v === undefined || v === null
   }
-
+  // 判断值有定义
   function isDef (v) {
     return v !== undefined && v !== null
   }
-
+  // 判断是否为true
   function isTrue (v) {
     return v === true
   }
-
+  // 判断是否为false
   function isFalse (v) {
     return v === false
   }
 
   /**
    * Check if value is primitive.
+   * 判断是否为原始类型=>除去了 Object Null Undefined
    */
   function isPrimitive (value) {
     return (
@@ -46,6 +52,9 @@
 
   /**
    * Quick object check - this is primarily used to tell
+   * https://flow.org/en/docs/types/mixed/
+   * mixed类型允许让你传入任何类型的变量, 但是你自己知道并且判断
+   * 这个变量的类型 flow才不会给你报错
    * Objects from primitive values when we know the value
    * is a JSON-compliant type.
    */
@@ -58,6 +67,11 @@
    */
   var _toString = Object.prototype.toString;
 
+  /**
+   * 获取元素的数据类型 "[object String]" => "String"
+   * @param value
+   * @returns {string}
+   */
   function toRawType (value) {
     return _toString.call(value).slice(8, -1)
   }
@@ -65,17 +79,25 @@
   /**
    * Strict object type check. Only returns true
    * for plain JavaScript objects.
+   * 是否是纯对象
    */
   function isPlainObject (obj) {
     return _toString.call(obj) === '[object Object]'
   }
 
+  /**
+   * 是否是正则对象
+   * @param 传入任何值
+   * @returns {boolean} 返回Boolean值
+   */
   function isRegExp (v) {
     return _toString.call(v) === '[object RegExp]'
   }
 
   /**
    * Check if val is a valid array index.
+   * 判断是否是一个 有效的数组下标索引
+   * 大于0 整数， 数值有限
    */
   function isValidArrayIndex (val) {
     var n = parseFloat(String(val));
@@ -83,6 +105,8 @@
   }
 
   /**
+   * https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/JSON/stringify
+   * JSON.stringify(val, null, 2)  => 第二个参数未传入 表示序列化所有的属性, 第三个参数表示缩进的字符串是2
    * Convert a value to a string that is actually rendered.
    */
   function toString (val) {
@@ -96,6 +120,8 @@
   /**
    * Convert an input value to a number for persistence.
    * If the conversion fails, return original string.
+   * 将String类型的变量转换成数值型，如果不是数值型的话
+   * 直接返回原对象
    */
   function toNumber (val) {
     var n = parseFloat(val);
@@ -105,6 +131,11 @@
   /**
    * Make a map and return a function for checking if a key
    * is in that map.
+   * const isIn = Vue._makeMap('a,b,c',true)
+   * isIn('a')
+   * 第二个参数如果是true的话，那么返回的函数的参数将统一做小写字母转换
+   * 实现一个Map，并且， 返回一个函数接受一个参数
+   * 传入一个参数 判断这个参数是否在这个Map里面
    */
   function makeMap (
     str,
@@ -122,6 +153,7 @@
 
   /**
    * Check if a tag is a built-in tag.
+   *
    */
   var isBuiltInTag = makeMap('slot,component', true);
 
@@ -4787,6 +4819,9 @@
   lifecycleMixin(Vue);
   renderMixin(Vue);
 
+  // 添加测试代码
+  Vue._makeMap = makeMap;
+
   /*  */
 
   function initUse (Vue) {
@@ -5106,6 +5141,7 @@
     Vue.nextTick = nextTick;
 
     Vue.options = Object.create(null);
+    //   'component','directive','filter'
     ASSET_TYPES.forEach(function (type) {
       Vue.options[type + 's'] = Object.create(null);
     });
@@ -5139,7 +5175,8 @@
   Object.defineProperty(Vue, 'FunctionalRenderContext', {
     value: FunctionalRenderContext
   });
-
+  // scripts/config.js 文件，在rollup 的 replace的 genConfig 方法=>有2.5.17-beta.0: version。
+  // 最终2.5.17-beta.0 将被 version 的值替换，version 的值就是 Vue 的版本号
   Vue.version = '2.5.17-beta.0';
 
   /*  */
@@ -11007,3 +11044,4 @@
   return Vue;
 
 })));
+//# sourceMappingURL=vue.js.map

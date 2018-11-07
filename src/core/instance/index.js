@@ -22,4 +22,11 @@ eventsMixin(Vue)
 lifecycleMixin(Vue)
 renderMixin(Vue)
 
+
+
+import {makeMap} from "../../shared/util";
+
+// 添加测试代码
+Vue._makeMap = makeMap
+
 export default Vue
