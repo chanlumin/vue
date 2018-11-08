@@ -24,9 +24,10 @@ renderMixin(Vue)
 
 
 
-import {makeMap, camelize} from "../../shared/util";
+import {makeMap, camelize, hyphenate} from "../../shared/util";
 // 添加测试代码
 Vue._makeMap = makeMap
 Vue._camelize = camelize
+Vue._hyphenate = hyphenate
 
 export default Vue

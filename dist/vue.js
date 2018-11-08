@@ -209,7 +209,7 @@
    * 将连字符转换成驼峰风格的字符串
    * https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/String/replace
    * replace第二个参数中函数中
-   * 第一个参数是匹配到的字符串 比如-b => 
+   * 第一个参数是匹配到的字符串 比如-b =>
    * 第二个参数是捕获的字符串 比如b
    * 函数要返回结果值 方能修改
    */
@@ -227,14 +227,21 @@
   });
 
   /**
+   * 以连字符号连接(hyphenate)
+   *  驼峰转为连字符
    * Hyphenate a camelCase string.
+   * \b表示单词边界  \B表示非单词边界
+   *
    */
   var hyphenateRE = /\B([A-Z])/g;
   var hyphenate = cached(function (str) {
+    // replace第二个参数如果是字符串 $1 表示第一个括号匹配的值
+    // A => -A => -a
     return str.replace(hyphenateRE, '-$1').toLowerCase()
   });
 
   /**
+   * PhantomJs的bind polyfill
    * Simple bind polyfill for environments that do not support it,
    * e.g., PhantomJS 1.x. Technically, we don't need this anymore
    * since native bind is now performant enough in most browsers.
@@ -248,29 +255,40 @@
       var l = arguments.length;
       return l
         ? l > 1
-          ? fn.apply(ctx, arguments)
-          : fn.call(ctx, a)
-        : fn.call(ctx)
+          ? fn.apply(ctx, arguments) // 有很多参数
+          : fn.call(ctx, a) // 之传入一个参数
+        : fn.call(ctx) // 没有传入
     }
-
+    // 函数的length表示函数定义时候的参数的个数
     boundFn._length = fn.length;
     return boundFn
   }
 
+  /**
+   * 原始bind
+   * @param fn
+   * @param ctx
+   * @returns {bound|any}
+   */
   function nativeBind (fn, ctx) {
     return fn.bind(ctx)
   }
 
+  /**
+   * 存在原生bind就用原生bind否则用ployfillBind
+   */
   var bind = Function.prototype.bind
     ? nativeBind
     : polyfillBind;
 
   /**
    * Convert an Array-like object to a real Array.
+   * 把类数组转为原生数组
+   * 创建一个数组并且把list从i+start放进数组里面
    */
   function toArray (list, start) {
     start = start || 0;
-    var i = list.length - start;
+    var i = list.length - start; // 需要放进数组里面的数目
     var ret = new Array(i);
     while (i--) {
       ret[i] = list[i + start];
@@ -280,6 +298,7 @@
 
   /**
    * Mix properties into target object.
+   * 浅拷贝把from对象的属性拷贝到to对象的属性中
    */
   function extend (to, _from) {
     for (var key in _from) {
@@ -290,6 +309,7 @@
 
   /**
    * Merge an Array of Objects into a single Object.
+   * 对象数组 一个个合并到一个结果对象中。
    */
   function toObject (arr) {
     var res = {};
@@ -307,11 +327,13 @@
    * Perform no operation.
    * Stubbing args to make Flow happy without leaving useless transpiled code
    * with ...rest (https://flow.org/blog/2017/05/07/Strict-Function-Call-Arity/).
+   * 空函数，a,b,c 为了避免flow 进行多余的转义
    */
   function noop (a, b, c) {}
 
   /**
    * Always return false.
+   * false
    */
   var no = function (a, b, c) { return false; };
 
@@ -319,11 +341,30 @@
 
   /**
    * Return the same value.
+   * 返回一个输入值，和返回值相同的函数
    */
   var identity = function (_) { return _; };
 
   /**
    * Generate a string containing static keys from compiler modules.
+   *
+   *  [
+       {
+          staticKeys: ['staticClass'],
+          transformNode,
+          genData
+       },
+      {
+        staticKeys: ['staticStyle'],
+        transformNode,
+        genData
+      },
+      {
+        preTransformNode
+      }
+    ]
+    萃取staticKeys然后转变为用，分隔的字符串。
+   *
    */
   function genStaticKeys (modules) {
     return modules.reduce(function (keys, m) {
@@ -334,21 +375,26 @@
   /**
    * Check if two values are loosely equal - that is,
    * if they are plain objects, do they have the same shape?
+   * 宽相等
    */
   function looseEqual (a, b) {
     if (a === b) { return true }
     var isObjectA = isObject(a);
     var isObjectB = isObject(b);
+    // 如果都是对象
     if (isObjectA && isObjectB) {
       try {
+        // 如果都是数组，对数组的每一个值进行对比。如果相等就返回
         var isArrayA = Array.isArray(a);
         var isArrayB = Array.isArray(b);
         if (isArrayA && isArrayB) {
           return a.length === b.length && a.every(function (e, i) {
             return looseEqual(e, b[i])
           })
+          // 如果都是Date的实例，返回当前时间戳进行对比
         } else if (a instanceof Date && b instanceof Date) {
           return a.getTime() === b.getTime()
+          // 如果都不是数组的话，就是对象， 对对象的每一个值进行对比
         } else if (!isArrayA && !isArrayB) {
           var keysA = Object.keys(a);
           var keysB = Object.keys(b);
@@ -363,6 +409,7 @@
         /* istanbul ignore next */
         return false
       }
+      // 如果不是对象的话 转化为String后进行对比
     } else if (!isObjectA && !isObjectB) {
       return String(a) === String(b)
     } else {
@@ -374,6 +421,7 @@
    * Return the first index at which a loosely equal value can be
    * found in the array (if value is a plain object, the array must
    * contain an object of the same shape), or -1 if it is not present.
+   * 如果通过宽相等能找得到在Array在val中的值就返回对应的位置，否则返回-1
    */
   function looseIndexOf (arr, val) {
     for (var i = 0; i < arr.length; i++) {
@@ -384,6 +432,7 @@
 
   /**
    * Ensure a function is called only once.
+   * 返回一个只能执行一次的函数
    */
   function once (fn) {
     var called = false;
@@ -4839,6 +4888,7 @@
   // 添加测试代码
   Vue._makeMap = makeMap;
   Vue._camelize = camelize;
+  Vue._hyphenate = hyphenate;
 
   /*  */
 

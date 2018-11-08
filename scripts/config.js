@@ -188,7 +188,6 @@ function genConfig (name) {
   // 'web-full-dev => {}
   const opts = builds[name]
   const config = {
-    sourceMap: true,
     input: opts.entry,
     external: opts.external,
     plugins: [
@@ -205,7 +204,8 @@ function genConfig (name) {
       file: opts.dest,
       format: opts.format,
       banner: opts.banner,
-      name: opts.moduleName || 'Vue'
+      name: opts.moduleName || 'Vue',
+      sourceMap: true,
     },
     onwarn: (msg, warn) => {
       if (!/Circular/.test(msg)) {
