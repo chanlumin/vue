@@ -142,17 +142,21 @@ export function makeMap (
 
 /**
  * Check if a tag is a built-in tag.
- *
+ * 判断Tag是否在slot和component之间
  */
 export const isBuiltInTag = makeMap('slot,component', true)
 
 /**
  * Check if an attribute is a reserved attribute.
+ * 判断value值是否在key, ref, slot, slot-scope, is之间
+ * key、ref、slot、slot-scope 以及 is 等属性皆属于内置属性不能使用这些属性作为 props 的名字。
  */
 export const isReservedAttribute = makeMap('key,ref,slot,slot-scope,is')
 
 /**
  * Remove an item from an array.
+ * 从数中删除一个元素, 返回被删除元素的数组
+ * https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Array/splice
  */
 export function remove (arr: Array<any>, item: any): Array<any> | void {
   if (arr.length) {
@@ -165,6 +169,7 @@ export function remove (arr: Array<any>, item: any): Array<any> | void {
 
 /**
  * Check whether an object has the property.
+ * 判断对象是否有key这个自有属性
  */
 const hasOwnProperty = Object.prototype.hasOwnProperty
 export function hasOwn (obj: Object | Array<*>, key: string): boolean {
@@ -173,6 +178,12 @@ export function hasOwn (obj: Object | Array<*>, key: string): boolean {
 
 /**
  * Create a cached version of a pure function.
+ * 为纯函数(输入什么，输出什么都不变的函数) 创建一个
+ * 缓存版本的函数
+ * function(a) {return a + 1}
+ * 1. 首先先从cache[str] 这个缓存对象去获取已经通过纯函数计算过的值
+ * 2. 如果没有获取到那么就通过纯函数计算之后把它缓存到cache这个对象缓存池子中
+ * 传入的是函数，返回的也是函数
  */
 export function cached<F: Function> (fn: F): F {
   const cache = Object.create(null)
@@ -184,6 +195,12 @@ export function cached<F: Function> (fn: F): F {
 
 /**
  * Camelize a hyphen-delimited string.
+ * 将连字符转换成驼峰风格的字符串
+ * https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/String/replace
+ * replace第二个参数中函数中
+ * 第一个参数是匹配到的字符串 比如-b => 
+ * 第二个参数是捕获的字符串 比如b
+ * 函数要返回结果值 方能修改
  */
 const camelizeRE = /-(\w)/g
 export const camelize = cached((str: string): string => {
@@ -192,6 +209,7 @@ export const camelize = cached((str: string): string => {
 
 /**
  * Capitalize a string.
+ * 字符串驼峰化
  */
 export const capitalize = cached((str: string): string => {
   return str.charAt(0).toUpperCase() + str.slice(1)

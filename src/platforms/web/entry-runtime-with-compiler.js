@@ -4,11 +4,13 @@ import config from 'core/config'
 import { warn, cached } from 'core/util/index'
 import { mark, measure } from 'core/util/perf'
 
+// 导入运行时的vue
 import Vue from './runtime/index'
 import { query } from './util/index'
 import { compileToFunctions } from './compiler/index'
 import { shouldDecodeNewlines, shouldDecodeNewlinesForHref } from './util/compat'
 
+// 根据id元素获取元素的innerHTML
 const idToTemplate = cached(id => {
   const el = query(id)
   return el && el.innerHTML
@@ -95,6 +97,7 @@ function getOuterHTML (el: Element): string {
   }
 }
 
+// 添加一个全局的Compile
 Vue.compile = compileToFunctions
 
 export default Vue

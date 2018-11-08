@@ -24,9 +24,9 @@ renderMixin(Vue)
 
 
 
-import {makeMap} from "../../shared/util";
-
+import {makeMap, camelize} from "../../shared/util";
 // 添加测试代码
 Vue._makeMap = makeMap
+Vue._camelize = camelize
 
 export default Vue

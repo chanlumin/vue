@@ -153,17 +153,21 @@
 
   /**
    * Check if a tag is a built-in tag.
-   *
+   * 判断Tag是否在slot和component之间
    */
   var isBuiltInTag = makeMap('slot,component', true);
 
   /**
    * Check if an attribute is a reserved attribute.
+   * 判断value值是否在key, ref, slot, slot-scope, is之间
+   * key、ref、slot、slot-scope 以及 is 等属性皆属于内置属性不能使用这些属性作为 props 的名字。
    */
   var isReservedAttribute = makeMap('key,ref,slot,slot-scope,is');
 
   /**
    * Remove an item from an array.
+   * 从数中删除一个元素, 返回被删除元素的数组
+   * https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Array/splice
    */
   function remove (arr, item) {
     if (arr.length) {
@@ -176,6 +180,7 @@
 
   /**
    * Check whether an object has the property.
+   * 判断对象是否有key这个自有属性
    */
   var hasOwnProperty = Object.prototype.hasOwnProperty;
   function hasOwn (obj, key) {
@@ -184,6 +189,12 @@
 
   /**
    * Create a cached version of a pure function.
+   * 为纯函数(输入什么，输出什么都不变的函数) 创建一个
+   * 缓存版本的函数
+   * function(a) {return a + 1}
+   * 1. 首先先从cache[str] 这个缓存对象去获取已经通过纯函数计算过的值
+   * 2. 如果没有获取到那么就通过纯函数计算之后把它缓存到cache这个对象缓存池子中
+   * 传入的是函数，返回的也是函数
    */
   function cached (fn) {
     var cache = Object.create(null);
@@ -195,6 +206,12 @@
 
   /**
    * Camelize a hyphen-delimited string.
+   * 将连字符转换成驼峰风格的字符串
+   * https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/String/replace
+   * replace第二个参数中函数中
+   * 第一个参数是匹配到的字符串 比如-b => 
+   * 第二个参数是捕获的字符串 比如b
+   * 函数要返回结果值 方能修改
    */
   var camelizeRE = /-(\w)/g;
   var camelize = cached(function (str) {
@@ -203,6 +220,7 @@
 
   /**
    * Capitalize a string.
+   * 字符串驼峰化
    */
   var capitalize = cached(function (str) {
     return str.charAt(0).toUpperCase() + str.slice(1)
@@ -4818,9 +4836,9 @@
   eventsMixin(Vue);
   lifecycleMixin(Vue);
   renderMixin(Vue);
-
   // 添加测试代码
   Vue._makeMap = makeMap;
+  Vue._camelize = camelize;
 
   /*  */
 
@@ -10951,6 +10969,7 @@
 
   /*  */
 
+  // 根据id元素获取元素的innerHTML
   var idToTemplate = cached(function (id) {
     var el = query(id);
     return el && el.innerHTML
@@ -11039,6 +11058,7 @@
     }
   }
 
+  // 添加一个全局的Compile
   Vue.compile = compileToFunctions;
 
   return Vue;
