@@ -24,6 +24,7 @@ import {
  * Option overwriting strategies are functions that handle
  * how to merge a parent option value and a child option
  * value into the final value.
+ * optionMergeStrategies的值默认是Object.create(null)
  */
 const strats = config.optionMergeStrategies
 

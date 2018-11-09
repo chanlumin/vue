@@ -18,6 +18,8 @@ export const isChrome = UA && /chrome\/\d+/.test(UA) && !isEdge
 // Firefox has a "watch" function on Object.prototype...
 export const nativeWatch = ({}).watch
 
+// 检测Passive是否可用
+// https://developer.mozilla.org/zh-CN/docs/Web/API/EventTarget/addEventListener
 export let supportsPassive = false
 if (inBrowser) {
   try {
@@ -28,6 +30,7 @@ if (inBrowser) {
         supportsPassive = true
       }
     }: Object)) // https://github.com/facebook/flow/issues/285
+    // 浏览器检查opts对象上的passive属性的时候 会产生get操作，然后把 supportsPassive置为True
     window.addEventListener('test-passive', null, opts)
   } catch (e) {}
 }
@@ -41,6 +44,7 @@ export const isServerRendering = () => {
     if (!inBrowser && !inWeex && typeof global !== 'undefined') {
       // detect presence of vue-server-renderer and avoid
       // Webpack shimming the process
+      // 判断是否提供vue ssr
       _isServer = global['process'].env.VUE_ENV === 'server'
     } else {
       _isServer = false
@@ -50,13 +54,20 @@ export const isServerRendering = () => {
 }
 
 // detect devtools
+// 检测浏览器开发工具
 export const devtools = inBrowser && window.__VUE_DEVTOOLS_GLOBAL_HOOK__
 
 /* istanbul ignore next */
+// native code的检测 辅助检测Symbol
+// Symbol.toString()
+// "function Symbol() { [native code] }"
+// Reflect.ownKeys.toString()
+// "function ownKeys() { [native code] }"
+
 export function isNative (Ctor: any): boolean {
   return typeof Ctor === 'function' && /native code/.test(Ctor.toString())
 }
-
+// 判断是支持Symbol
 export const hasSymbol =
   typeof Symbol !== 'undefined' && isNative(Symbol) &&
   typeof Reflect !== 'undefined' && isNative(Reflect.ownKeys)
@@ -68,6 +79,8 @@ if (typeof Set !== 'undefined' && isNative(Set)) {
   _Set = Set
 } else {
   // a non-standard Set polyfill that only works with primitive keys.
+  // 添加键作为  值作为标记
+  // Set的优雅降级
   _Set = class Set implements SimpleSet {
     set: Object;
     constructor () {
@@ -84,7 +97,8 @@ if (typeof Set !== 'undefined' && isNative(Set)) {
     }
   }
 }
-
+//  you can use interface in order to declare the structure of the class that you are expecting.
+// https://flow.org/en/docs/types/interfaces/
 interface SimpleSet {
   has(key: string | number): boolean;
   add(key: string | number): mixed;

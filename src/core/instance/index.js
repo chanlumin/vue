@@ -25,9 +25,13 @@ renderMixin(Vue)
 
 
 import {makeMap, camelize, hyphenate} from "../../shared/util";
+import {generateComponentTrace, tip, formatComponentName} from "../util/index";
 // 添加测试代码
 Vue._makeMap = makeMap
 Vue._camelize = camelize
 Vue._hyphenate = hyphenate
-
+Vue._generateComponentTrace = generateComponentTrace
+Vue._tip = tip
+Vue._warn = warn
+Vue._formatComponentName = formatComponentName
 export default Vue

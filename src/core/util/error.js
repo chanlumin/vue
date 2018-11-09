@@ -8,13 +8,16 @@ export function handleError (err: Error, vm: any, info: string) {
   if (vm) {
     let cur = vm
     while ((cur = cur.$parent)) {
+      // 获取自定义的hook
       const hooks = cur.$options.errorCaptured
       if (hooks) {
         for (let i = 0; i < hooks.length; i++) {
           try {
+            // 没有获取错误return
             const capture = hooks[i].call(cur, err, vm, info) === false
             if (capture) return
           } catch (e) {
+            // 全局处理错误
             globalHandleError(e, cur, 'errorCaptured hook')
           }
         }
@@ -26,6 +29,8 @@ export function handleError (err: Error, vm: any, info: string) {
 
 function globalHandleError (err, vm, info) {
   if (config.errorHandler) {
+    // 先调用config下的errorHandler处理函数。
+    //
     try {
       return config.errorHandler.call(null, err, vm, info)
     } catch (e) {
@@ -40,6 +45,7 @@ function logError (err, vm, info) {
     warn(`Error in ${info}: "${err.toString()}"`, vm)
   }
   /* istanbul ignore else */
+  // Weex环境下直接console.error打出
   if ((inBrowser || inWeex) && typeof console !== 'undefined') {
     console.error(err)
   } else {

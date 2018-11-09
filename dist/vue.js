@@ -570,12 +570,16 @@
    * Check if a string starts with $ or _
    */
   function isReserved (str) {
+    // 转为字符串，获取第一个字符
+    // 获取ASCII编码，对比ASCII编码的数值
     var c = (str + '').charCodeAt(0);
     return c === 0x24 || c === 0x5F
   }
 
   /**
    * Define a property.
+   * 通过Object.defineProperty给对象定义
+   * 一个属性
    */
   function def (obj, key, val, enumerable) {
     Object.defineProperty(obj, key, {
@@ -588,8 +592,23 @@
 
   /**
    * Parse simple path.
+   * 'foo.bar.fu.ba'
    */
+
+  // 如果存在字母数字下划线 . 和 $ 符号的话就返回false
+  //   不存在的话就返回true
   var bailRE = /[^\w.$]/;
+
+  /**
+   *  模板中的 属性取值 调用方式如下
+   *  const b = parsePath('1123123.123123')
+   *  b({'1123123': {
+   *     '123123': 'hello'
+   *  }})
+   * "hello"
+   * @param path
+   * @returns {function(*=): *}
+   */
   function parsePath (path) {
     if (bailRE.test(path)) {
       return
@@ -598,8 +617,10 @@
     return function (obj) {
       for (var i = 0; i < segments.length; i++) {
         if (!obj) { return }
+        // 深度赋值
         obj = obj[segments[i]];
       }
+      // 返回比如 xxx.xxx.www 最后的www属性的值
       return obj
     }
   }
@@ -624,6 +645,8 @@
   // Firefox has a "watch" function on Object.prototype...
   var nativeWatch = ({}).watch;
 
+  // 检测Passive是否可用
+  // https://developer.mozilla.org/zh-CN/docs/Web/API/EventTarget/addEventListener
   var supportsPassive = false;
   if (inBrowser) {
     try {
@@ -634,6 +657,7 @@
           supportsPassive = true;
         }
       })); // https://github.com/facebook/flow/issues/285
+      // 浏览器检查opts对象上的passive属性的时候 会产生get操作，然后把 supportsPassive置为True
       window.addEventListener('test-passive', null, opts);
     } catch (e) {}
   }
@@ -647,6 +671,7 @@
       if (!inBrowser && !inWeex && typeof global !== 'undefined') {
         // detect presence of vue-server-renderer and avoid
         // Webpack shimming the process
+        // 判断是否提供vue ssr
         _isServer = global['process'].env.VUE_ENV === 'server';
       } else {
         _isServer = false;
@@ -656,13 +681,20 @@
   };
 
   // detect devtools
+  // 检测浏览器开发工具
   var devtools = inBrowser && window.__VUE_DEVTOOLS_GLOBAL_HOOK__;
 
   /* istanbul ignore next */
+  // native code的检测 辅助检测Symbol
+  // Symbol.toString()
+  // "function Symbol() { [native code] }"
+  // Reflect.ownKeys.toString()
+  // "function ownKeys() { [native code] }"
+
   function isNative (Ctor) {
     return typeof Ctor === 'function' && /native code/.test(Ctor.toString())
   }
-
+  // 判断是支持Symbol
   var hasSymbol =
     typeof Symbol !== 'undefined' && isNative(Symbol) &&
     typeof Reflect !== 'undefined' && isNative(Reflect.ownKeys);
@@ -674,6 +706,8 @@
     _Set = Set;
   } else {
     // a non-standard Set polyfill that only works with primitive keys.
+    // 添加键作为  值作为标记
+    // Set的优雅降级
     _Set = /*@__PURE__*/(function () {
       function Set () {
         this.set = Object.create(null);
@@ -701,21 +735,35 @@
 
   {
     var hasConsole = typeof console !== 'undefined';
+    // 将'aa-bb-cc'转为=>AaBbCc 将连字符转为驼峰，首字母也进转
     var classifyRE = /(?:^|[-_])(\w)/g;
     var classify = function (str) { return str
       .replace(classifyRE, function (c) { return c.toUpperCase(); })
       .replace(/[-_]/g, ''); };
 
+    /**
+     * 警告函数
+     * @param msg
+     * @param vm
+     */
     warn = function (msg, vm) {
       var trace = vm ? generateComponentTrace(vm) : '';
 
+      // config.warnHandler默认是空
+      // 如果自定义警告处理函数的话，执行它
       if (config.warnHandler) {
         config.warnHandler.call(null, msg, vm, trace);
+        // config.silent默认是false
+        // 警告信息通过console.err输出
       } else if (hasConsole && (!config.silent)) {
         console.error(("[Vue warn]: " + msg + trace));
       }
     };
-
+    /**
+     * 提示函数
+     * @param msg
+     * @param vm
+     */
     tip = function (msg, vm) {
       if (hasConsole && (!config.silent)) {
         console.warn("[Vue tip]: " + msg + (
@@ -725,9 +773,14 @@
     };
 
     formatComponentName = function (vm, includeFile) {
+      // 如果vue实例的$root属性等于本身
       if (vm.$root === vm) {
         return '<Root>'
       }
+      // 通过new出来的vue实例是一个对象
+      // 是'function', 并且有cid直接赋值给options
+      // 是Vue实例的话直接通过vm.$options 或者 vm.constructor
+      // 不是vm实例的话直接赋值给options 默认是个月对象
       var options = typeof vm === 'function' && vm.cid != null
         ? vm.options
         : vm._isVue
@@ -736,38 +789,55 @@
       var name = options.name || options._componentTag;
       var file = options.__file;
       if (!name && file) {
+        // 如果name不存在，通过vm.$options.__file获取文件名
         var match = file.match(/([^/\\]+)\.vue$/);
         name = match && match[1];
       }
 
+      // name存在包裹name, name不存在的话, 直接返回在按个file文件中
       return (
         (name ? ("<" + (classify(name)) + ">") : "<Anonymous>") +
         (file && includeFile !== false ? (" at " + file) : '')
       )
     };
 
+    /**
+     * 传入字符串, 和重复的次数,返回重复的字符串
+     * @param str
+     * @param n
+     * @returns {string}
+     */
     var repeat = function (str, n) {
       var res = '';
       while (n) {
+        // 如果是奇数的话 res单独加一次str
         if (n % 2 === 1) { res += str; }
+        // 如果是偶数的话 str + str => 加两倍str 然后记性除整
         if (n > 1) { str += str; }
         n >>= 1;
       }
+      // 返回res
       return res
     };
-
+    // 产生组件回溯信息
+    // constructor
+    // https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Object/constructor
     generateComponentTrace = function (vm) {
       if (vm._isVue && vm.$parent) {
         var tree = [];
         var currentRecursiveSequence = 0;
         while (vm) {
           if (tree.length > 0) {
+            // 获取最后一个元素
             var last = tree[tree.length - 1];
+            // 如果最后一个元素的构造器和vm的构造器相等
+            // 如果都是继承于Vue往上回溯
             if (last.constructor === vm.constructor) {
               currentRecursiveSequence++;
               vm = vm.$parent;
               continue
             } else if (currentRecursiveSequence > 0) {
+              //
               tree[tree.length - 1] = [last, currentRecursiveSequence];
               currentRecursiveSequence = 0;
             }
@@ -775,6 +845,7 @@
           tree.push(vm);
           vm = vm.$parent;
         }
+        // 输出回溯信息
         return '\n\nfound in\n\n' + tree
           .map(function (vm, i) { return ("" + (i === 0 ? '---> ' : repeat(' ', 5 + i * 2)) + (Array.isArray(vm)
               ? ((formatComponentName(vm[0])) + "... (" + (vm[1]) + " recursive calls)")
@@ -1235,6 +1306,7 @@
    * Option overwriting strategies are functions that handle
    * how to merge a parent option value and a child option
    * value into the final value.
+   * optionMergeStrategies的值默认是Object.create(null)
    */
   var strats = config.optionMergeStrategies;
 
@@ -1876,13 +1948,16 @@
     if (vm) {
       var cur = vm;
       while ((cur = cur.$parent)) {
+        // 获取自定义的hook
         var hooks = cur.$options.errorCaptured;
         if (hooks) {
           for (var i = 0; i < hooks.length; i++) {
             try {
+              // 没有获取错误return
               var capture = hooks[i].call(cur, err, vm, info) === false;
               if (capture) { return }
             } catch (e) {
+              // 全局处理错误
               globalHandleError(e, cur, 'errorCaptured hook');
             }
           }
@@ -1894,6 +1969,8 @@
 
   function globalHandleError (err, vm, info) {
     if (config.errorHandler) {
+      // 先调用config下的errorHandler处理函数。
+      //
       try {
         return config.errorHandler.call(null, err, vm, info)
       } catch (e) {
@@ -1908,6 +1985,7 @@
       warn(("Error in " + info + ": \"" + (err.toString()) + "\""), vm);
     }
     /* istanbul ignore else */
+    // Weex环境下直接console.error打出
     if ((inBrowser || inWeex) && typeof console !== 'undefined') {
       console.error(err);
     } else {
@@ -1920,8 +1998,13 @@
   var callbacks = [];
   var pending = false;
 
+  /***
+   * 执行callback里面的函数，
+   * 重置callback数组
+   */
   function flushCallbacks () {
     pending = false;
+    //
     var copies = callbacks.slice(0);
     callbacks.length = 0;
     for (var i = 0; i < copies.length; i++) {
@@ -1937,6 +2020,19 @@
   // when state is changed right before repaint (e.g. #6813, out-in transitions).
   // Here we use microtask by default, but expose a way to force (macro) task when
   // needed (e.g. in event handlers attached by v-on).
+
+  // 在浏览器环境中，常见的 macro task 有 setTimeout、MessageChannel、postMessage、setImmediate；
+  // 常见的 micro task 有 MutationObsever 和 Promise.then。
+  // macro Task执行完了之后 再去执行micro Task
+  // for (macroTask of macroTaskQueue) {
+  //     // 1. Handle current MACRO-TASK
+  //     handleMacroTask();
+  //
+  //     // 2. Handle all MICRO-TASK
+  //     for (microTask of microTaskQueue) {
+  //         handleMicroTask(microTask);
+  //     }
+  // }
   var microTimerFunc;
   var macroTimerFunc;
   var useMacroTask = false;
@@ -1946,15 +2042,22 @@
   // in IE. The only polyfill that consistently queues the callback after all DOM
   // events triggered in the same loop is by using MessageChannel.
   /* istanbul ignore if */
+  // 如果是IE浏览器下的话直接执行setImmediate
   if (typeof setImmediate !== 'undefined' && isNative(setImmediate)) {
     macroTimerFunc = function () {
       setImmediate(flushCallbacks);
     };
+    // 第一个判断是普通浏览器的原生MessageChannel对象
+    // 第二个是PhantomJs环境下的MessageChannel对象
+    // "function MessageChannel() { [native code] }"
   } else if (typeof MessageChannel !== 'undefined' && (
     isNative(MessageChannel) ||
     // PhantomJS
     MessageChannel.toString() === '[object MessageChannelConstructor]'
   )) {
+    // https://developer.mozilla.org/zh-CN/docs/Web/API/MessageChannel
+    // 通过MessageChannel 由port2往port1发送message 在接受消息的回调函数处理
+    // 函数的调用
     var channel = new MessageChannel();
     var port = channel.port2;
     channel.port1.onmessage = flushCallbacks;
@@ -1979,16 +2082,20 @@
       // microtask queue but the queue isn't being flushed, until the browser
       // needs to do some other work, e.g. handle a timer. Therefore we can
       // "force" the microtask queue to be flushed by adding an empty timer.
+      // 解决iOS的then问题
       if (isIOS) { setTimeout(noop); }
     };
   } else {
     // fallback to macro
+    // microTimer的优雅降级
     microTimerFunc = macroTimerFunc;
   }
 
   /**
    * Wrap a function so that if any code inside triggers state change,
    * the changes are queued using a (macro) task instead of a microtask.
+   * 装饰一个函数 如果代码触发state改变的话，
+   * 这些改变会用macro task去改变，而不是用microtask去改变
    */
   function withMacroTask (fn) {
     return fn._withTask || (fn._withTask = function () {
@@ -2001,6 +2108,7 @@
 
   function nextTick (cb, ctx) {
     var _resolve;
+    // push一个包裹回调函数的函数到callbacks 并执行
     callbacks.push(function () {
       if (cb) {
         try {
@@ -2021,6 +2129,13 @@
       }
     }
     // $flow-disable-line
+    // nextTick不提供cb的话, 提供_resolve
+    // 让你有机会重新为回调函数进行赋值,通过返回的promise在then
+    // 里面加一个回调函数
+    // 就会把then里面的回调函数
+    // 赋值给_resolve
+    // flushCallbacks的时候就能够执行_resolve的函数
+    //
     if (!cb && typeof Promise !== 'undefined') {
       return new Promise(function (resolve) {
         _resolve = resolve;
@@ -2032,6 +2147,14 @@
 
   var mark;
   var measure;
+
+  // mark('for-start')
+  // for (let i = 0; i < 100; i++) {
+  //   console.log(i)
+  // }
+  // mark('for-end')
+  // measure('for-measure', 'for-start', 'for-end')
+  // https://developer.mozilla.org/zh-CN/docs/Web/API/Performance
 
   {
     var perf = inBrowser && window.performance;
@@ -2045,6 +2168,7 @@
     ) {
       mark = function (tag) { return perf.mark(tag); };
       measure = function (name, startTag, endTag) {
+        // measure完之后, 清除标志
         perf.measure(name, startTag, endTag);
         perf.clearMarks(startTag);
         perf.clearMarks(endTag);
@@ -4889,6 +5013,10 @@
   Vue._makeMap = makeMap;
   Vue._camelize = camelize;
   Vue._hyphenate = hyphenate;
+  Vue._generateComponentTrace = generateComponentTrace;
+  Vue._tip = tip;
+  Vue._warn = warn;
+  Vue._formatComponentName = formatComponentName;
 
   /*  */
 
@@ -11114,4 +11242,3 @@
   return Vue;
 
 })));
-//# sourceMappingURL=vue.js.map
