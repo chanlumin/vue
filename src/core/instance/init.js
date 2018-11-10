@@ -31,8 +31,10 @@ export function initMixin (Vue: Class<Component>) {
     }
 
     // a flag to avoid this being observed
+    // 一个避免该对象被响应系统监测的标志
     vm._isVue = true
     // merge options
+    // optionn有组件的话
     if (options && options._isComponent) {
       // optimize internal component instantiation
       // since dynamic options merging is pretty slow, and none of the
@@ -40,9 +42,9 @@ export function initMixin (Vue: Class<Component>) {
       initInternalComponent(vm, options)
     } else {
       vm.$options = mergeOptions(
-        resolveConstructorOptions(vm.constructor),
-        options || {},
-        vm
+        resolveConstructorOptions(vm.constructor), // 构造函数的option
+        options || {}, // 自己传入的option
+        vm // vm实例
       )
     }
     /* istanbul ignore else */
@@ -64,8 +66,10 @@ export function initMixin (Vue: Class<Component>) {
 
     /* istanbul ignore if */
     if (process.env.NODE_ENV !== 'production' && config.performance && mark) {
+      // 获取vm的名字
       vm._name = formatComponentName(vm, false)
       mark(endTag)
+      // 进行性能追踪
       measure(`vue ${vm._name} init`, startTag, endTag)
     }
 
@@ -93,10 +97,35 @@ export function initInternalComponent (vm: Component, options: InternalComponent
     opts.staticRenderFns = options.staticRenderFns
   }
 }
-
+// vm.$options = mergeOptions(
+//   // resolveConstructorOptions(vm.constructor)
+//   {
+//     components: {
+//       KeepAlive
+//       Transition,
+//       TransitionGroup
+//     },
+//     directives:{
+//       model,
+//       show
+//     },
+//     filters: Object.create(null),
+//     _base: Vue
+//   },
+//   // options || {}
+//   {
+//     el: '#app',
+//     data: {
+//       test: 1
+//     }
+//   },
+//   vm
+// )
 export function resolveConstructorOptions (Ctor: Class<Component>) {
+  // Vue的构造函数， vm.constructor
   let options = Ctor.options
   if (Ctor.super) {
+    // Vue.extend({}) => 产生的子类
     const superOptions = resolveConstructorOptions(Ctor.super)
     const cachedSuperOptions = Ctor.superOptions
     if (superOptions !== cachedSuperOptions) {
@@ -104,9 +133,11 @@ export function resolveConstructorOptions (Ctor: Class<Component>) {
       // need to resolve new options.
       Ctor.superOptions = superOptions
       // check if there are any late-modified/attached options (#4976)
+      // 用来解决使用 vue-hot-reload-api 或者 vue-loader 时产生的一个 bug 的。
       const modifiedOptions = resolveModifiedOptions(Ctor)
       // update base extend options
       if (modifiedOptions) {
+        // extend 浅拷贝
         extend(Ctor.extendOptions, modifiedOptions)
       }
       options = Ctor.options = mergeOptions(superOptions, Ctor.extendOptions)

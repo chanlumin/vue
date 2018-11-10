@@ -246,8 +246,10 @@ const defaultStrat = function (parentVal: any, childVal: any): any {
 
 /**
  * Validate component names
+ * 验证组件名称
  */
 function checkComponents (options: Object) {
+  // 验证每个组件的子组件的名字
   for (const key in options.components) {
     validateComponentName(key)
   }
@@ -255,12 +257,16 @@ function checkComponents (options: Object) {
 
 export function validateComponentName (name: string) {
   if (!/^[a-zA-Z][\w-]*$/.test(name)) {
+    // 如果不是以字母开头，以字母数字，下划线结尾的话
+    // 警告
     warn(
       'Invalid component name: "' + name + '". Component names ' +
       'can only contain alphanumeric characters and the hyphen, ' +
       'and must start with a letter.'
     )
   }
+  //  如果是slots, components 或者在配置文件写的保字段的话
+  //  警告
   if (isBuiltInTag(name) || config.isReservedTag(name)) {
     warn(
       'Do not use built-in or reserved HTML elements as component ' +
@@ -368,6 +374,7 @@ export function mergeOptions (
   child: Object,
   vm?: Component
 ): Object {
+  // 非生产环境下的话, 检测一下，子类的components名字的合法性
   if (process.env.NODE_ENV !== 'production') {
     checkComponents(child)
   }

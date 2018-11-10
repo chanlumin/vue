@@ -1528,8 +1528,10 @@
 
   /**
    * Validate component names
+   * 验证组件名称
    */
   function checkComponents (options) {
+    // 验证每个组件的子组件的名字
     for (var key in options.components) {
       validateComponentName(key);
     }
@@ -1537,12 +1539,16 @@
 
   function validateComponentName (name) {
     if (!/^[a-zA-Z][\w-]*$/.test(name)) {
+      // 如果不是以字母开头，以字母数字，下划线结尾的话
+      // 警告
       warn(
         'Invalid component name: "' + name + '". Component names ' +
         'can only contain alphanumeric characters and the hyphen, ' +
         'and must start with a letter.'
       );
     }
+    //  如果是slots, components 或者在配置文件写的保字段的话
+    //  警告
     if (isBuiltInTag(name) || config.isReservedTag(name)) {
       warn(
         'Do not use built-in or reserved HTML elements as component ' +
@@ -1650,6 +1656,7 @@
     child,
     vm
   ) {
+    // 非生产环境下的话, 检测一下，子类的components名字的合法性
     {
       checkComponents(child);
     }
@@ -4876,8 +4883,10 @@
       }
 
       // a flag to avoid this being observed
+      // 一个避免该对象被响应系统监测的标志
       vm._isVue = true;
       // merge options
+      // optionn有组件的话
       if (options && options._isComponent) {
         // optimize internal component instantiation
         // since dynamic options merging is pretty slow, and none of the
@@ -4885,9 +4894,9 @@
         initInternalComponent(vm, options);
       } else {
         vm.$options = mergeOptions(
-          resolveConstructorOptions(vm.constructor),
-          options || {},
-          vm
+          resolveConstructorOptions(vm.constructor), // 构造函数的option
+          options || {}, // 自己传入的option
+          vm // vm实例
         );
       }
       /* istanbul ignore else */
@@ -4907,8 +4916,10 @@
 
       /* istanbul ignore if */
       if (config.performance && mark) {
+        // 获取vm的名字
         vm._name = formatComponentName(vm, false);
         mark(endTag);
+        // 进行性能追踪
         measure(("vue " + (vm._name) + " init"), startTag, endTag);
       }
 
@@ -4936,10 +4947,35 @@
       opts.staticRenderFns = options.staticRenderFns;
     }
   }
-
+  // vm.$options = mergeOptions(
+  //   // resolveConstructorOptions(vm.constructor)
+  //   {
+  //     components: {
+  //       KeepAlive
+  //       Transition,
+  //       TransitionGroup
+  //     },
+  //     directives:{
+  //       model,
+  //       show
+  //     },
+  //     filters: Object.create(null),
+  //     _base: Vue
+  //   },
+  //   // options || {}
+  //   {
+  //     el: '#app',
+  //     data: {
+  //       test: 1
+  //     }
+  //   },
+  //   vm
+  // )
   function resolveConstructorOptions (Ctor) {
+    // Vue的构造函数， vm.constructor
     var options = Ctor.options;
     if (Ctor.super) {
+      // Vue.extend({}) => 产生的子类
       var superOptions = resolveConstructorOptions(Ctor.super);
       var cachedSuperOptions = Ctor.superOptions;
       if (superOptions !== cachedSuperOptions) {
@@ -4947,9 +4983,11 @@
         // need to resolve new options.
         Ctor.superOptions = superOptions;
         // check if there are any late-modified/attached options (#4976)
+        // 用来解决使用 vue-hot-reload-api 或者 vue-loader 时产生的一个 bug 的。
         var modifiedOptions = resolveModifiedOptions(Ctor);
         // update base extend options
         if (modifiedOptions) {
+          // extend 浅拷贝
           extend(Ctor.extendOptions, modifiedOptions);
         }
         options = Ctor.options = mergeOptions(superOptions, Ctor.extendOptions);
@@ -5521,6 +5559,7 @@
 
   // this map is intentionally selective, only covering SVG elements that may
   // contain child elements.
+  // 不区分大小写
   var isSVG = makeMap(
     'svg,animate,circle,clippath,cursor,defs,desc,ellipse,filter,font-face,' +
     'foreignObject,g,glyph,image,line,marker,mask,missing-glyph,path,pattern,' +
@@ -5528,12 +5567,15 @@
     true
   );
 
+  // 是否是 'pre' 这个标签名字
   var isPreTag = function (tag) { return tag === 'pre'; };
 
+  // 是否是保留的标签 包括 html 标签和svg标签
   var isReservedTag = function (tag) {
     return isHTMLTag(tag) || isSVG(tag)
   };
 
+  // 获取Tag的命名空间 也就是根空间
   function getTagNamespace (tag) {
     if (isSVG(tag)) {
       return 'svg'
@@ -5545,32 +5587,42 @@
     }
   }
 
+  // 不知道的元素的缓存, 用对象作为缓存器
   var unknownElementCache = Object.create(null);
   function isUnknownElement (tag) {
     /* istanbul ignore if */
+    // 非浏览器环境下 都是不知道的标签，不用进行处理
     if (!inBrowser) {
       return true
     }
+    // 是保留标签的话 返回不用处理
     if (isReservedTag(tag)) {
       return false
     }
     tag = tag.toLowerCase();
     /* istanbul ignore if */
+    // 缓存对象中包含非保留标签，直接返回属性值
     if (unknownElementCache[tag] != null) {
       return unknownElementCache[tag]
     }
     var el = document.createElement(tag);
+    // var c = document.createElement('g-a-d');c.toString()
+    // "[object HTMLElement]"
     if (tag.indexOf('-') > -1) {
       // http://stackoverflow.com/a/28210364/1070244
+      // 如果是 'a-b-c' 这样的标签 用浏览器下不会是HTMLUnknownElement 所以用以下判断
       return (unknownElementCache[tag] = (
         el.constructor === window.HTMLUnknownElement ||
         el.constructor === window.HTMLElement
       ))
     } else {
+      // var b  = document.createElement('dfs')；b.toString()
+      // "[object HTMLUnknownElement]"
       return (unknownElementCache[tag] = /HTMLUnknownElement/.test(el.toString()))
     }
   }
 
+  // textInputType的Map标签
   var isTextInputType = makeMap('text,number,password,search,email,tel,url');
 
   /*  */
@@ -11131,12 +11183,19 @@
   var compileToFunctions = ref$1.compileToFunctions;
 
   /*  */
-
+  //
+  // getShouldDecode(true)
+  // <a href="&#10;"></a>
+  // true
+  // getShouldDecode(false)
+  // <div a=""></div>
+  // false
   // check whether current browser encodes a char inside attribute values
   var div;
   function getShouldDecode (href) {
     div = div || document.createElement('div');
     div.innerHTML = href ? "<a href=\"\n\"/>" : "<div a=\"\n\"/>";
+    // &#10; 表示\n 这个符号
     return div.innerHTML.indexOf('&#10;') > 0
   }
 
