@@ -197,23 +197,31 @@ export function defineReactive (
  * Set a property on an object. Adds the new property and
  * triggers change notification if the property doesn't
  * already exist.
+ *
+ * 设置属性或者添加新的属性，如果新的属性不存在的话，添加的时候
+ * 触发一个改变的通知。
+ * to, key, from
  */
 export function set (target: Array<any> | Object, key: any, val: any): any {
+  // 开发环境的话，提示不能给undefined,null,primitive 设置值
   if (process.env.NODE_ENV !== 'production' &&
     (isUndef(target) || isPrimitive(target))
   ) {
     warn(`Cannot set reactive property on undefined, null, or primitive value: ${(target: any)}`)
   }
+  // 数组 并且 isFinite(index) =>  是一个有效的数组下标， 往target添加值，返回添加的值
   if (Array.isArray(target) && isValidArrayIndex(key)) {
     target.length = Math.max(target.length, key)
     target.splice(key, 1, val)
     return val
   }
+  // 存在在target 直接返回值
   if (key in target && !(key in Object.prototype)) {
     target[key] = val
     return val
   }
   const ob = (target: any).__ob__
+  // 如果target是给Vue对象, 并且监听者存在的话。
   if (target._isVue || (ob && ob.vmCount)) {
     process.env.NODE_ENV !== 'production' && warn(
       'Avoid adding reactive properties to a Vue instance or its root $data ' +
@@ -221,11 +229,14 @@ export function set (target: Array<any> | Object, key: any, val: any): any {
     )
     return val
   }
+  // 监听者不存在的话
   if (!ob) {
     target[key] = val
     return val
   }
+  // 添加属性
   defineReactive(ob.value, key, val)
+  // 通知
   ob.dep.notify()
   return val
 }

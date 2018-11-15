@@ -124,6 +124,7 @@ export function initInternalComponent (vm: Component, options: InternalComponent
 export function resolveConstructorOptions (Ctor: Class<Component>) {
   // Vue的构造函数， vm.constructor
   let options = Ctor.options
+  // vm.super
   if (Ctor.super) {
     // Vue.extend({}) => 产生的子类
     const superOptions = resolveConstructorOptions(Ctor.super)

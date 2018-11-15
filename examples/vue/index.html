@@ -7,15 +7,63 @@
 </head>
 <body>
   <div id="app">
+    <opt v-bind:opt="item">
+      <child></child>
+    </opt>
     {{message}}
   </div>
 </body>
 
 <script>
+
+  // const ChildComponent = {
+  //   template: '<div>child component</div>',
+  //   created: function () {
+  //     // 这里的 data 是父组件注入进来的
+  //     console.log(this.inj)
+  //   },
+  //   inject: ['inj']
+  // }
+  Vue.component('child', {
+    inject: ['childVal'],
+    template: `<div>child</div>`
+  })
+  Vue.component('opt', {
+    props: [
+      'opt'
+    ],
+    provide: {
+      childVal:'zhoufan'
+    },
+    template: `<div>name: {{opt.name}},<br> age: {{opt.age}}, <br>  sex: {{opt.sex}}</div>`,
+    components: {
+      'child': `child`
+    },
+    directives: {
+      test1: {
+        bind: function () {
+          console.log('v-test1')
+        }
+      },
+      test2: {
+        function() {
+          console.log('v-test2')
+        }
+      }
+    }
+  })
   window.vm = new Vue({
     el: '#app',
     data: {
-      message: 'hello world'
+      message: 'hello world',
+      item: {
+        name: 'Group',
+        age: 12,
+        sex: '男'
+      }
+    },
+    provide: {
+      inj: 'test inject'
     }
   })
 </script>
