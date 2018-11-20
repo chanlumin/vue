@@ -1,5 +1,6 @@
 /* @flow */
 
+//  import shared 所有内容
 export * from 'shared/util'
 export * from './lang'
 export * from './env'

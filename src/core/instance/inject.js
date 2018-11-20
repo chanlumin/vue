@@ -7,6 +7,7 @@ import { defineReactive, toggleObserving } from '../observer/index'
 export function initProvide (vm: Component) {
   const provide = vm.$options.provide
   if (provide) {
+    // 处理provide为function的情况，就执行它
     vm._provided = typeof provide === 'function'
       ? provide.call(vm)
       : provide
@@ -16,6 +17,7 @@ export function initProvide (vm: Component) {
 export function initInjections (vm: Component) {
   const result = resolveInject(vm.$options.inject, vm)
   if (result) {
+    // 取消监测
     toggleObserving(false)
     Object.keys(result).forEach(key => {
       /* istanbul ignore else */
@@ -36,10 +38,17 @@ export function initInjections (vm: Component) {
   }
 }
 
+/**
+ * 找父类的原型链的inject
+ * @param inject
+ * @param vm
+ * @returns {any}
+ */
 export function resolveInject (inject: any, vm: Component): ?Object {
   if (inject) {
     // inject is :any because flow is not smart enough to figure out cached
     const result = Object.create(null)
+    // 获取可以枚举的键值对
     const keys = hasSymbol
       ? Reflect.ownKeys(inject).filter(key => {
         /* istanbul ignore next */
@@ -48,9 +57,11 @@ export function resolveInject (inject: any, vm: Component): ?Object {
       : Object.keys(inject)
 
     for (let i = 0; i < keys.length; i++) {
+      // 在mergeOption的话 就是from给 inject 添加from属性
       const key = keys[i]
       const provideKey = inject[key].from
       let source = vm
+      // 往父类寻找provide
       while (source) {
         if (source._provided && hasOwn(source._provided, provideKey)) {
           result[key] = source._provided[provideKey]
@@ -59,6 +70,7 @@ export function resolveInject (inject: any, vm: Component): ?Object {
         source = source.$parent
       }
       if (!source) {
+        // 不存在vm 获取inject的default值
         if ('default' in inject[key]) {
           const provideDefault = inject[key].default
           result[key] = typeof provideDefault === 'function'

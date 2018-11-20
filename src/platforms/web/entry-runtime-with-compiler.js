@@ -36,7 +36,9 @@ Vue.prototype.$mount = function (
   if (!options.render) {
     let template = options.template
     if (template) {
+      //  字符串
       if (typeof template === 'string') {
+        // #开头的字符串 通过id获取template
         if (template.charAt(0) === '#') {
           template = idToTemplate(template)
           /* istanbul ignore if */
@@ -47,6 +49,7 @@ Vue.prototype.$mount = function (
             )
           }
         }
+        // 元素节点
       } else if (template.nodeType) {
         template = template.innerHTML
       } else {
@@ -58,6 +61,7 @@ Vue.prototype.$mount = function (
     } else if (el) {
       template = getOuterHTML(el)
     }
+    // 获取到template字符串的话
     if (template) {
       /* istanbul ignore if */
       if (process.env.NODE_ENV !== 'production' && config.performance && mark) {
@@ -84,8 +88,16 @@ Vue.prototype.$mount = function (
 }
 
 /**
+ * 获取整个HTML的字符串
  * Get outerHTML of elements, taking care
  * of SVG elements in IE as well.
+ *
+ * 获取outterHTML
+ * var d = document.createElement('div')
+   var b = document.createTextNode('hi')
+   d.appendChild(b)
+   getOuterHTML(d)
+   "<div>hi</div>"
  */
 function getOuterHTML (el: Element): string {
   if (el.outerHTML) {

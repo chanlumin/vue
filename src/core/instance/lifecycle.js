@@ -21,10 +21,15 @@ import {
 export let activeInstance: any = null
 export let isUpdatingChildComponent: boolean = false
 
+/**
+ * 初始化 生命周期的初始参数
+ * @param vm
+ */
 export function initLifecycle (vm: Component) {
   const options = vm.$options
 
   // locate first non-abstract parent
+  // 获取一个非抽象的父组件push进去 $children
   let parent = options.parent
   if (parent && !options.abstract) {
     while (parent.$options.abstract && parent.$parent) {
@@ -32,8 +37,8 @@ export function initLifecycle (vm: Component) {
     }
     parent.$children.push(vm)
   }
-
   vm.$parent = parent
+  // 有root取root 否则 vue实例
   vm.$root = parent ? parent.$root : vm
 
   vm.$children = []
@@ -205,6 +210,7 @@ export function mountComponent (
   return vm
 }
 
+// 更新子实例的时候才会有_parentListeners
 export function updateChildComponent (
   vm: Component,
   propsData: ?Object,
@@ -271,6 +277,7 @@ export function updateChildComponent (
   }
 }
 
+// 递归找出vm Tree是否有存在 _inactive为true的组件
 function isInInactiveTree (vm) {
   while (vm && (vm = vm.$parent)) {
     if (vm._inactive) return true
@@ -278,6 +285,7 @@ function isInInactiveTree (vm) {
   return false
 }
 
+// 激活子组件
 export function activateChildComponent (vm: Component, direct?: boolean) {
   if (direct) {
     vm._directInactive = false
@@ -312,8 +320,14 @@ export function deactivateChildComponent (vm: Component, direct?: boolean) {
   }
 }
 
+/**
+ * 添加生命周期钩子
+ * @param vm vue实例
+ * @param hook 钩子名称
+ */
 export function callHook (vm: Component, hook: string) {
   // #7573 disable dep collection when invoking lifecycle hooks
+  // 禁止在执行生命周期钩子中的函数进行依赖收集
   pushTarget()
   const handlers = vm.$options[hook]
   if (handlers) {
@@ -325,6 +339,8 @@ export function callHook (vm: Component, hook: string) {
       }
     }
   }
+  // @hook:beforeCreat="handleBeforeCreate" 派发handleBeforeCreate事件
+  // 可在template中进行监听
   if (vm._hasHookEvent) {
     vm.$emit('hook:' + hook)
   }

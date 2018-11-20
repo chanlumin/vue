@@ -52,6 +52,8 @@ const patternTypes: Array<Function> = [String, RegExp, Array]
 
 export default {
   name: 'keep-alive',
+  // 抽象组件, 不渲染到DOM中去，
+  // 不出现在父子路径关系
   abstract: true,
 
   props: {

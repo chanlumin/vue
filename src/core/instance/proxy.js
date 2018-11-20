@@ -39,6 +39,7 @@ if (process.env.NODE_ENV !== 'production') {
 
   if (hasProxy) {
     const isBuiltInModifier = makeMap('stop,prevent,self,ctrl,shift,alt,meta,exact')
+    // keyCode默认是 Object.create(null)
     config.keyCodes = new Proxy(config.keyCodes, {
       set (target, key, value) {
         if (isBuiltInModifier(key)) {
@@ -52,13 +53,18 @@ if (process.env.NODE_ENV !== 'production') {
     })
   }
 
+  // key往target.$data属性添加的合法性
   const hasHandler = {
     has (target, key) {
       const has = key in target
+      // isAllowed production->dev => 走1  prod -> 走2
       const isAllowed = allowedGlobals(key) ||
         (typeof key === 'string' && key.charAt(0) === '_' && !(key in target.$data))
+      // 下划线 和 allowedGlobals的key值都是不被允许的
+      // 如果是下划线的话
       if (!has && !isAllowed) {
         if (key in target.$data) warnReservedPrefix(target, key)
+        // 未定义, 被引用
         else warnNonPresent(target, key)
       }
       return has || !isAllowed
@@ -77,7 +83,7 @@ if (process.env.NODE_ENV !== 'production') {
 
   initProxy = function initProxy (vm) {
     if (hasProxy) {
-      // determine which proxy handler to use
+      // determine which proxy handler to use  火狐浏览器
       const options = vm.$options
       const handlers = options.render && options.render._withStripped
         ? getHandler

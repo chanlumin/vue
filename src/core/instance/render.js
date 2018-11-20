@@ -20,6 +20,7 @@ export function initRender (vm: Component) {
   vm._staticTrees = null // v-once cached trees
   const options = vm.$options
   const parentVnode = vm.$vnode = options._parentVnode // the placeholder node in parent tree
+  // 上下文
   const renderContext = parentVnode && parentVnode.context
   vm.$slots = resolveSlots(options._renderChildren, renderContext)
   vm.$scopedSlots = emptyObject
@@ -38,6 +39,7 @@ export function initRender (vm: Component) {
 
   /* istanbul ignore else */
   if (process.env.NODE_ENV !== 'production') {
+    // 第四个参数 非生产环境下defineProperty中的get属性中调用
     defineReactive(vm, '$attrs', parentData && parentData.attrs || emptyObject, () => {
       !isUpdatingChildComponent && warn(`$attrs is readonly.`, vm)
     }, true)

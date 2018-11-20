@@ -17,14 +17,14 @@ export default class VNode {
   raw: boolean; // contains raw HTML? (server only)
   isStatic: boolean; // hoisted static node
   isRootInsert: boolean; // necessary for enter transition check
-  isComment: boolean; // empty comment placeholder?
+  isComment: boolean; // empty comment placeholder? 空的注释节点
   isCloned: boolean; // is a cloned node?
   isOnce: boolean; // is a v-once node?
   asyncFactory: Function | void; // async component factory function
   asyncMeta: Object | void;
   isAsyncPlaceholder: boolean;
   ssrContext: Object | void;
-  fnContext: Component | void; // real context vm for functional nodes
+  fnContext: Component | void; // real context vm for functional nodes 真实的vm环境上下文
   fnOptions: ?ComponentOptions; // for SSR caching
   fnScopeId: ?string; // functional scope id support
 
@@ -70,6 +70,7 @@ export default class VNode {
   }
 }
 
+// 创建空的节点
 export const createEmptyVNode = (text: string = '') => {
   const node = new VNode()
   node.text = text
@@ -77,14 +78,17 @@ export const createEmptyVNode = (text: string = '') => {
   return node
 }
 
+// 创建文本节点
 export function createTextVNode (val: string | number) {
   return new VNode(undefined, undefined, undefined, String(val))
 }
 
 // optimized shallow clone
+// 优化浅拷贝克隆
 // used for static nodes and slot nodes because they may be reused across
 // multiple renders, cloning them avoids errors when DOM manipulations rely
 // on their elm reference.
+// 避免通过DOM引用你产生的渲染 发生错误 浅拷贝一份新的Node节点
 export function cloneVNode (vnode: VNode): VNode {
   const cloned = new VNode(
     vnode.tag,

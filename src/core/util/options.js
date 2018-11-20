@@ -186,6 +186,7 @@ LIFECYCLE_HOOKS.forEach(hook => {
  * When a vm is present (instance creation), we need to do
  * a three-way merge between constructor options, instance
  * options and parent options.
+ * 合并构造选项option,  实例option, 父option
  */
 function mergeAssets (
   parentVal: ?Object,
@@ -197,8 +198,11 @@ function mergeAssets (
   if (childVal) {
     // 如果不在dev环境的话 断言一下childVal 给出提示
     process.env.NODE_ENV !== 'production' && assertObjectType(key, childVal, vm)
+
+    console.log(extend(res, childVal), 'extend: ')
     return extend(res, childVal)
   } else {
+    console.log(res, 'res')
     return res
   }
 }
@@ -212,6 +216,7 @@ ASSET_TYPES.forEach(function (type) {
  *
  * Watchers hashes should not overwrite one
  * another, so we merge them as arrays.
+ * 合并Watchers
  */
 strats.watch = function (
   parentVal: ?Object,
@@ -220,6 +225,7 @@ strats.watch = function (
   key: string
 ): ?Object {
   // work around Firefox's Object.prototype.watch...
+  //  vue 没有提供Watch函数
   if (parentVal === nativeWatch) parentVal = undefined
   if (childVal === nativeWatch) childVal = undefined
   /* istanbul ignore if */
@@ -230,6 +236,7 @@ strats.watch = function (
   if (!parentVal) return childVal
   const ret = {}
   extend(ret, parentVal)
+  // 结果对象是 是一个对象数组
   for (const key in childVal) {
     let parent = ret[key]
     const child = childVal[key]
@@ -259,6 +266,8 @@ strats.computed = function (
     assertObjectType(key, childVal, vm)
   }
   if (!parentVal) return childVal
+
+  // 父类和子类都存在的话
   const ret = Object.create(null)
   extend(ret, parentVal)
   if (childVal) extend(ret, childVal)
@@ -511,6 +520,7 @@ export function mergeOptions (
  * Resolve an asset.
  * This function is used because child instances need access
  * to assets defined in its ancestor chain.
+ * 处理资源，孩子实例，需要定义祖先的原型链
  */
 export function resolveAsset (
   options: Object,
@@ -525,11 +535,13 @@ export function resolveAsset (
   const assets = options[type]
   // check local registration variations first
   if (hasOwn(assets, id)) return assets[id]
+  // 把id转为驼峰和连接线(帕斯卡命名)判断在assets中是否存在
   const camelizedId = camelize(id)
   if (hasOwn(assets, camelizedId)) return assets[camelizedId]
   const PascalCaseId = capitalize(camelizedId)
   if (hasOwn(assets, PascalCaseId)) return assets[PascalCaseId]
   // fallback to prototype chain
+  // asse自身没有id、camelizedId、PascalCaseId的话，降级到原型链(也就是父元素中去找)
   const res = assets[id] || assets[camelizedId] || assets[PascalCaseId]
   if (process.env.NODE_ENV !== 'production' && warnMissing && !res) {
     warn(

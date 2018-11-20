@@ -34,7 +34,7 @@ const sharedPropertyDefinition = {
   get: noop,
   set: noop
 }
-
+// proxy(vm, `_data`, key)
 export function proxy (target: Object, sourceKey: string, key: string) {
   sharedPropertyDefinition.get = function proxyGetter () {
     return this[sourceKey][key]
@@ -42,6 +42,7 @@ export function proxy (target: Object, sourceKey: string, key: string) {
   sharedPropertyDefinition.set = function proxySetter (val) {
     this[sourceKey][key] = val
   }
+  // 给target 添加一个key 第三个参数是可配置对象
   Object.defineProperty(target, key, sharedPropertyDefinition)
 }
 
@@ -129,6 +130,7 @@ function initData (vm: Component) {
   let i = keys.length
   while (i--) {
     const key = keys[i]
+    // methods或者props已经包含了data中的属性 warn
     if (process.env.NODE_ENV !== 'production') {
       if (methods && hasOwn(methods, key)) {
         warn(
@@ -144,6 +146,7 @@ function initData (vm: Component) {
         vm
       )
     } else if (!isReserved(key)) {
+      // 把key代理到_data中
       proxy(vm, `_data`, key)
     }
   }
@@ -153,6 +156,7 @@ function initData (vm: Component) {
 
 export function getData (data: Function, vm: Component): any {
   // #7573 disable dep collection when invoking data getters
+  // Data是funciton 才去获取Data
   pushTarget()
   try {
     return data.call(vm, vm)

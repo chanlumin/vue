@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Reactive</title>
+  <script src="../../dist/vue.js"></script>
+</head>
+<body>
+
+  <div id="app">
+    {{a}}
+  </div>
+
+
+  <script>
+    const vm = new Vue({
+      el: '#app',
+      data(){
+        return {
+          a : 'hello world',
+          b: [
+            {aa: 'hi'},
+            {bb: 'hello'}
+          ]
+        }
+      }
+    })
+    vm.$watch('a', ()=> {
+      console.log('A is 变化了')
+    })
+  </script>
+
+
+
+</body>
+</html>
