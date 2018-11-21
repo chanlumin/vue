@@ -44,6 +44,7 @@ export function initLifecycle (vm: Component) {
   vm.$children = []
   vm.$refs = {}
 
+  // 定义watcher
   vm._watcher = null
   vm._inactive = null
   vm._directInactive = false
@@ -146,6 +147,7 @@ export function mountComponent (
     vm.$options.render = createEmptyVNode
     if (process.env.NODE_ENV !== 'production') {
       /* istanbul ignore if */
+      // render函数不存在 传入了template提示 还没有编译compiler
       if ((vm.$options.template && vm.$options.template.charAt(0) !== '#') ||
         vm.$options.el || el) {
         warn(
@@ -155,6 +157,7 @@ export function mountComponent (
           vm
         )
       } else {
+        // runtime version 没有传入template 提示
         warn(
           'Failed to mount component: template or render function not defined.',
           vm
@@ -174,11 +177,13 @@ export function mountComponent (
       const endTag = `vue-perf-end:${id}`
 
       mark(startTag)
+      // 生成虚拟节点
       const vnode = vm._render()
       mark(endTag)
       measure(`vue ${name} render`, startTag, endTag)
 
       mark(startTag)
+      // 渲染成真正的DOM
       vm._update(vnode, hydrating)
       mark(endTag)
       measure(`vue ${name} patch`, startTag, endTag)

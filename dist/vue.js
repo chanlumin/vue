@@ -1921,6 +1921,10 @@
   ) {
     var prop = propOptions[key];
     var absent = !hasOwn(propsData, key);
+    // vm.$options.propsData = {
+    //   prop1: '1',
+    //   prop2: '2'
+    // }
     var value = propsData[key];
     // boolean casting
     var booleanIndex = getTypeIndex(Boolean, prop.type);
@@ -1980,6 +1984,7 @@
     }
     // call factory function for non-Function types
     // a value is Function if its prototype is function even across different execution context
+    // default 如果是function，执行返回，否则直接定义就行。
     return typeof def === 'function' && getType(prop.type) !== 'Function'
       ? def.call(vm)
       : def
@@ -2066,20 +2071,25 @@
    * Use function string name to check built-in types,
    * because a simple equality check will fail when running
    * across different vms / iframes.
+   * 获取函数名字
    */
   function getType (fn) {
     var match = fn && fn.toString().match(/^\s*function (\w+)/);
     return match ? match[1] : ''
   }
 
+  // 参数a与参数b的函数名称相等
   function isSameType (a, b) {
     return getType(a) === getType(b)
   }
 
+  //
   function getTypeIndex (type, expectedTypes) {
+    // 非数组 类型一样 成功返回0， 失败返回-1
     if (!Array.isArray(expectedTypes)) {
       return isSameType(expectedTypes, type) ? 0 : -1
     }
+    // 数组的话， 遍历数组返回和type相等的type的下标值，失败返回-1
     for (var i = 0, len = expectedTypes.length; i < len; i++) {
       if (isSameType(expectedTypes[i], type)) {
         return i
@@ -2093,6 +2103,7 @@
       " Expected " + (expectedTypes.map(capitalize).join(', '));
     var expectedType = expectedTypes[0];
     var receivedType = toRawType(value);
+    // 规范化值
     var expectedValue = styleValue(value, expectedType);
     var receivedValue = styleValue(value, receivedType);
     // check if we need to specify expected value
@@ -2110,6 +2121,7 @@
   }
 
   function styleValue (value, type) {
+    // 通过type标准化value值
     if (type === 'String') {
       return ("\"" + value + "\"")
     } else if (type === 'Number') {
@@ -2119,11 +2131,13 @@
     }
   }
 
+  // valule是否包含可解释的类型，可解释类型包括 'string, 'number', 'boolean'
   function isExplicable (value) {
     var explicitTypes = ['string', 'number', 'boolean'];
     return explicitTypes.some(function (elem) { return value.toLowerCase() === elem; })
   }
 
+  // 是否包含Boolean类型（字符串）
   function isBoolean () {
     var args = [], len = arguments.length;
     while ( len-- ) args[ len ] = arguments[ len ];
@@ -2195,6 +2209,7 @@
     pending = false;
     //
     var copies = callbacks.slice(0);
+    //  清空callbacks数组
     callbacks.length = 0;
     for (var i = 0; i < copies.length; i++) {
       copies[i]();
@@ -2249,6 +2264,7 @@
     // 函数的调用
     var channel = new MessageChannel();
     var port = channel.port2;
+    // 回调被注册为macro Task
     channel.port1.onmessage = flushCallbacks;
     macroTimerFunc = function () {
       port.postMessage(1);
@@ -2271,7 +2287,7 @@
       // microtask queue but the queue isn't being flushed, until the browser
       // needs to do some other work, e.g. handle a timer. Therefore we can
       // "force" the microtask queue to be flushed by adding an empty timer.
-      // 解决iOS的then问题
+      // 触发一个macro Task 触发iOS下的micro Task
       if (isIOS) { setTimeout(noop); }
     };
   } else {
@@ -2309,8 +2325,11 @@
         _resolve(ctx);
       }
     });
+    // 回调队列是否处于 等待刷新的状态
     if (!pending) {
       pending = true;
+
+      // 等到调用栈 清空之后才去执行任务队列的任务
       if (useMacroTask) {
         macroTimerFunc();
       } else {
@@ -2484,6 +2503,7 @@
     }
     // 如果已经存在观察者的话，返回，否则添加对应ID
     // 如果val是数组，不走这里，所以可以在下面判断数组
+    // 避免val为循环引用的对象 引起的死循环
     if (val.__ob__) {
       var depId = val.__ob__.dep.id;
       if (seen.has(depId)) {
@@ -3141,6 +3161,7 @@
     vm.$children = [];
     vm.$refs = {};
 
+    // 定义watcher
     vm._watcher = null;
     vm._inactive = null;
     vm._directInactive = false;
@@ -3243,6 +3264,7 @@
       vm.$options.render = createEmptyVNode;
       {
         /* istanbul ignore if */
+        // render函数不存在 传入了template提示 还没有编译compiler
         if ((vm.$options.template && vm.$options.template.charAt(0) !== '#') ||
           vm.$options.el || el) {
           warn(
@@ -3252,6 +3274,7 @@
             vm
           );
         } else {
+          // runtime version 没有传入template 提示
           warn(
             'Failed to mount component: template or render function not defined.',
             vm
@@ -3271,11 +3294,13 @@
         var endTag = "vue-perf-end:" + id;
 
         mark(startTag);
+        // 生成虚拟节点
         var vnode = vm._render();
         mark(endTag);
         measure(("vue " + name + " render"), startTag, endTag);
 
         mark(startTag);
+        // 渲染成真正的DOM
         vm._update(vnode, hydrating);
         mark(endTag);
         measure(("vue " + name + " patch"), startTag, endTag);
@@ -3578,11 +3603,11 @@
     var id = watcher.id;
     if (has[id] == null) {
       has[id] = true;
-      // 默认flushing是false  不是刷新状态
+      // 默认flushing是false  默认不是更新状态的时候
       if (!flushing) {
         queue.push(watcher);
       } else {
-        // 正在刷新的话, 找到watcher的id 并且把它删除掉
+        // 正在刷新的话, 找到watcher的id位置，添加到对应的位置
         // if already flushing, splice the watcher based on its id
         // if already past its id, it will be run next immediately.
         var i = queue.length - 1;
@@ -3591,11 +3616,12 @@
         }
         queue.splice(i + 1, 0, watcher);
       }
-      // queue the flush
+      // queue the flush  不管调用多少次queueWatche都只执行一个
       if (!waiting) {
         waiting = true;
         // 非生产环境下 非异步
         if (!config.async) {
+          // flushSchedulerQueue在数据更新的玩之后 重置初始化值
           flushSchedulerQueue();
           return
         }
@@ -3625,7 +3651,7 @@
     isRenderWatcher
   ) {
     this.vm = vm;
-    // 渲染watcher
+    // 是否是渲染函数的观察者
     if (isRenderWatcher) {
       vm._watcher = this;
     }
@@ -3634,7 +3660,7 @@
     if (options) {
       // 获取options中的布尔值
       this.deep = !!options.deep;
-      this.user = !!options.user;
+      this.user = !!options.user; // 开发者自定义
       this.lazy = !!options.lazy;
       this.sync = !!options.sync;
       this.before = options.before;
@@ -3645,7 +3671,8 @@
     this.cb = cb;
     this.id = ++uid$1; // uid for batching
     this.active = true;
-    this.dirty = this.lazy; // for lazy watchers
+    this.dirty = this.lazy; // for lazy watchers 计算计算属性的时候 dirty才为真
+    // 避免重复收集依赖
     this.deps = [];
     this.newDeps = [];
     this.depIds = new _Set();
@@ -3667,7 +3694,7 @@
         );
       }
     }
-    // 非llazy 执行当前的get
+    // 非lazy 执行当前的get, lazy是执行计算属性的一个标志
     this.value = this.lazy
       ? undefined
       : this.get();
@@ -3678,14 +3705,15 @@
    */
   Watcher.prototype.get = function get () {
     // 把当前的Watcher赋值个Dep.Target这个全局对象
+    // 在getter调用getter之前，添加Watcher到Dep.target上
     pushTarget(this);
     var value;
     var vm = this.vm;
     try {
-      // 调用parsePath之后的函数
+      // 调用parsePath之后的函数，对被观察的目标进行求职
       value = this.getter.call(vm, vm);
     } catch (e) {
-      // 友好提示
+      // 用户自定义友好提示
       if (this.user) {
         handleError(e, vm, ("getter for watcher \"" + (this.expression) + "\""));
       } else {
@@ -3711,8 +3739,10 @@
   Watcher.prototype.addDep = function addDep (dep) {
     var id = dep.id;
     if (!this.newDepIds.has(id)) {
+      // 收集新的依赖在一次求值中避免收集重复的观察者 {{name}} {{name}}
       this.newDepIds.add(id);
       this.newDeps.push(dep);
+
       // 往Dep添加 Watcher
       if (!this.depIds.has(id)) {
         dep.addSub(this);
@@ -3727,8 +3757,9 @@
   Watcher.prototype.cleanupDeps = function cleanupDeps () {
     var i = this.deps.length;
     while (i--) {
+      //dep是上次求值收集到的依赖
       var dep = this.deps[i];
-      // 不是新的依赖的话 把当前的Watcher清除掉
+      // 不再新的依赖列表中，观察者和Dep实例对象没有关系了, 把当前的Watcher清除掉
       if (!this.newDepIds.has(dep.id)) {
         dep.removeSub(this);
       }
@@ -3753,10 +3784,13 @@
   Watcher.prototype.update = function update () {
     /* istanbul ignore else */
     if (this.lazy) {
+      // 计算属性的标志
       this.dirty = true;
+      // 同步的话
     } else if (this.sync) {
       this.run();
     } else {
+      // 调用栈被清空之后按照一定的顺序执行
       queueWatcher(this);
     }
   };
@@ -3768,6 +3802,7 @@
   Watcher.prototype.run = function run () {
     //
     if (this.active) {
+      // 重新求值， 重新执行渲染函数
       var value = this.get();
       // 更新值 执行回调函数
       if (
@@ -3775,13 +3810,17 @@
         // Deep watchers and watchers on Object/Arrays should fire even
         // when the value is the same, because the value may
         // have mutated. 值改变
+        // var data = {obj: {a: 1}};
+        // var obj1 = data.obj.a; data.obj1.a = 2
+        // var obj2 = data.obj.a;
+        // console.log(obj1, obj2)是对象的话，就要改变
         isObject(value) ||
         this.deep
       ) {
         // set new value
         var oldValue = this.value;
         this.value = value;
-        // 开启错误捕获
+        // 这个观察者是开发者自己定义Wacher的话， 自己定义回调函数
         if (this.user) {
           try {
             this.cb.call(this.vm, value, oldValue);
@@ -3802,6 +3841,7 @@
    */
   Watcher.prototype.evaluate = function evaluate () {
     this.value = this.get();
+    // 表示计算属性已经求过值了
     this.dirty = false;
   };
 
@@ -3827,11 +3867,12 @@
       // remove self from vm's watcher list
       // this is a somewhat expensive operation so we skip it
       // if the vm is being destroyed.
-      // 非销毁阶段
+      // 组件没有被销毁的时候才需要移除（接触属性与观察者之间的关系）
       if (!this.vm._isBeingDestroyed) {
         remove(this.vm._watchers, this);
       }
       var i = this.deps.length;
+      // 将观察者实例 从所有的Dep实例中，移除
       while (i--) {
         this.deps[i].removeSub(this);
       }
@@ -3876,14 +3917,17 @@
   }
 
   function initProps (vm, propsOptions) {
+    // propsData => 组件传入的 真实的值
     var propsData = vm.$options.propsData || {};
     var props = vm._props = {};
     // cache prop keys so that future props updates can iterate using Array
     // instead of dynamic object key enumeration.
+    // 通过数组替代对象迭代进行props更新
     var keys = vm.$options._propKeys = [];
     var isRoot = !vm.$parent;
     // root instance props should be converted
     if (!isRoot) {
+      // shouldObserve设置为false
       toggleObserving(false);
     }
     var loop = function ( key ) {
@@ -3891,6 +3935,7 @@
       var value = validateProp(key, propsOptions, propsData, vm);
       /* istanbul ignore else */
       {
+        // 转成连字符Key
         var hyphenatedKey = hyphenate(key);
         if (isReservedAttribute(hyphenatedKey) ||
             config.isReservedAttr(hyphenatedKey)) {
@@ -3990,6 +4035,19 @@
     var isSSR = isServerRendering();
 
     for (var key in computed) {
+      // userDef = {
+      //   get: function () {
+      //     return this.a + 1
+      //   },
+      //   set: function (v) {
+      //     this.a = v - 1
+      //   }
+      // }
+      // userDef = {
+      //  foo() {
+      //    console.log('foo')
+      //  }
+      // }
       var userDef = computed[key];
       var getter = typeof userDef === 'function' ? userDef : userDef.get;
       if (getter == null) {
@@ -4001,6 +4059,7 @@
 
       if (!isSSR) {
         // create internal watcher for the computed property.
+        // 创建计算属性的观察者
         watchers[key] = new Watcher(
           vm,
           getter || noop,
@@ -4015,6 +4074,7 @@
       if (!(key in vm)) {
         defineComputed(vm, key, userDef);
       } else {
+        // computed属性和vm中的$data和props冲突
         if (key in vm.$data) {
           warn(("The computed property \"" + key + "\" is already defined in data."), vm);
         } else if (vm.$options.props && key in vm.$options.props) {
@@ -4029,6 +4089,7 @@
     key,
     userDef
   ) {
+    // 非服务端渲染的话
     var shouldCache = !isServerRendering();
     if (typeof userDef === 'function') {
       sharedPropertyDefinition.get = shouldCache
@@ -4036,6 +4097,12 @@
         : userDef;
       sharedPropertyDefinition.set = noop;
     } else {
+      // computed: {
+      //     foo: {
+      //     get() {console.log('get')},
+      //     set() {console.log('set')}
+      //   }
+      // }
       sharedPropertyDefinition.get = userDef.get
         ? shouldCache && userDef.cache !== false
           ? createComputedGetter(key)
@@ -4060,9 +4127,11 @@
     return function computedGetter () {
       var watcher = this._computedWatchers && this._computedWatchers[key];
       if (watcher) {
+        // 手动求值
         if (watcher.dirty) {
           watcher.evaluate();
         }
+        // 收集依赖
         if (Dep.target) {
           watcher.depend();
         }
@@ -4098,7 +4167,16 @@
       vm[key] = methods[key] == null ? noop : bind(methods[key], vm);
     }
   }
-
+  // watch: {
+  //   name : [
+  //     function () {
+  //       console.log('func1')
+  //     },
+  //     function () {
+  //       console.log('func2')
+  //     }
+  //   ]
+  // }
   function initWatch (vm, watch) {
     for (var key in watch) {
       var handler = watch[key];
@@ -4112,6 +4190,7 @@
     }
   }
 
+  // 创建Watcher
   function createWatcher (
     vm,
     expOrFn,
@@ -4122,6 +4201,14 @@
       options = handler;
       handler = handler.handler;
     }
+    // watch: {
+    //   name: 'handleNameChange'
+    // },
+    // methods: {
+    //   handleNameChange () {
+    //     console.log('name change')
+    //   }
+    // }
     if (typeof handler === 'string') {
       handler = vm[handler];
     }
@@ -4164,11 +4251,14 @@
         return createWatcher(vm, expOrFn, cb, options)
       }
       options = options || {};
+      // 用户自定义的Watcher
       options.user = true;
       var watcher = new Watcher(vm, expOrFn, cb, options);
+      // 如果imediate为 true的话，立即执行回调函数。
       if (options.immediate) {
         cb.call(vm, watcher.value);
       }
+      //
       return function unwatchFn () {
         watcher.teardown();
       }

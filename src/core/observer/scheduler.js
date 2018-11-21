@@ -142,11 +142,11 @@ export function queueWatcher (watcher: Watcher) {
   const id = watcher.id
   if (has[id] == null) {
     has[id] = true
-    // 默认flushing是false  不是刷新状态
+    // 默认flushing是false  默认不是更新状态的时候
     if (!flushing) {
       queue.push(watcher)
     } else {
-      // 正在刷新的话, 找到watcher的id 并且把它删除掉
+      // 正在刷新的话, 找到watcher的id位置，添加到对应的位置
       // if already flushing, splice the watcher based on its id
       // if already past its id, it will be run next immediately.
       let i = queue.length - 1
@@ -155,11 +155,12 @@ export function queueWatcher (watcher: Watcher) {
       }
       queue.splice(i + 1, 0, watcher)
     }
-    // queue the flush
+    // queue the flush  不管调用多少次queueWatche都只执行一个
     if (!waiting) {
       waiting = true
       // 非生产环境下 非异步
       if (process.env.NODE_ENV !== 'production' && !config.async) {
+        // flushSchedulerQueue在数据更新的玩之后 重置初始化值
         flushSchedulerQueue()
         return
       }

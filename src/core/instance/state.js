@@ -63,14 +63,17 @@ export function initState (vm: Component) {
 }
 
 function initProps (vm: Component, propsOptions: Object) {
+  // propsData => 组件传入的 真实的值
   const propsData = vm.$options.propsData || {}
   const props = vm._props = {}
   // cache prop keys so that future props updates can iterate using Array
   // instead of dynamic object key enumeration.
+  // 通过数组替代对象迭代进行props更新
   const keys = vm.$options._propKeys = []
   const isRoot = !vm.$parent
   // root instance props should be converted
   if (!isRoot) {
+    // shouldObserve设置为false
     toggleObserving(false)
   }
   for (const key in propsOptions) {
@@ -78,6 +81,7 @@ function initProps (vm: Component, propsOptions: Object) {
     const value = validateProp(key, propsOptions, propsData, vm)
     /* istanbul ignore else */
     if (process.env.NODE_ENV !== 'production') {
+      // 转成连字符Key
       const hyphenatedKey = hyphenate(key)
       if (isReservedAttribute(hyphenatedKey) ||
           config.isReservedAttr(hyphenatedKey)) {
@@ -177,6 +181,19 @@ function initComputed (vm: Component, computed: Object) {
   const isSSR = isServerRendering()
 
   for (const key in computed) {
+    // userDef = {
+    //   get: function () {
+    //     return this.a + 1
+    //   },
+    //   set: function (v) {
+    //     this.a = v - 1
+    //   }
+    // }
+    // userDef = {
+    //  foo() {
+    //    console.log('foo')
+    //  }
+    // }
     const userDef = computed[key]
     const getter = typeof userDef === 'function' ? userDef : userDef.get
     if (process.env.NODE_ENV !== 'production' && getter == null) {
@@ -188,6 +205,7 @@ function initComputed (vm: Component, computed: Object) {
 
     if (!isSSR) {
       // create internal watcher for the computed property.
+      // 创建计算属性的观察者
       watchers[key] = new Watcher(
         vm,
         getter || noop,
@@ -202,6 +220,7 @@ function initComputed (vm: Component, computed: Object) {
     if (!(key in vm)) {
       defineComputed(vm, key, userDef)
     } else if (process.env.NODE_ENV !== 'production') {
+      // computed属性和vm中的$data和props冲突
       if (key in vm.$data) {
         warn(`The computed property "${key}" is already defined in data.`, vm)
       } else if (vm.$options.props && key in vm.$options.props) {
@@ -216,6 +235,7 @@ export function defineComputed (
   key: string,
   userDef: Object | Function
 ) {
+  // 非服务端渲染的话
   const shouldCache = !isServerRendering()
   if (typeof userDef === 'function') {
     sharedPropertyDefinition.get = shouldCache
@@ -223,6 +243,12 @@ export function defineComputed (
       : userDef
     sharedPropertyDefinition.set = noop
   } else {
+    // computed: {
+    //     foo: {
+    //     get() {console.log('get')},
+    //     set() {console.log('set')}
+    //   }
+    // }
     sharedPropertyDefinition.get = userDef.get
       ? shouldCache && userDef.cache !== false
         ? createComputedGetter(key)
@@ -248,9 +274,11 @@ function createComputedGetter (key) {
   return function computedGetter () {
     const watcher = this._computedWatchers && this._computedWatchers[key]
     if (watcher) {
+      // 手动求值
       if (watcher.dirty) {
         watcher.evaluate()
       }
+      // 收集依赖
       if (Dep.target) {
         watcher.depend()
       }
@@ -286,7 +314,16 @@ function initMethods (vm: Component, methods: Object) {
     vm[key] = methods[key] == null ? noop : bind(methods[key], vm)
   }
 }
-
+// watch: {
+//   name : [
+//     function () {
+//       console.log('func1')
+//     },
+//     function () {
+//       console.log('func2')
+//     }
+//   ]
+// }
 function initWatch (vm: Component, watch: Object) {
   for (const key in watch) {
     const handler = watch[key]
@@ -300,6 +337,7 @@ function initWatch (vm: Component, watch: Object) {
   }
 }
 
+// 创建Watcher
 function createWatcher (
   vm: Component,
   expOrFn: string | Function,
@@ -310,6 +348,14 @@ function createWatcher (
     options = handler
     handler = handler.handler
   }
+  // watch: {
+  //   name: 'handleNameChange'
+  // },
+  // methods: {
+  //   handleNameChange () {
+  //     console.log('name change')
+  //   }
+  // }
   if (typeof handler === 'string') {
     handler = vm[handler]
   }
@@ -352,11 +398,14 @@ export function stateMixin (Vue: Class<Component>) {
       return createWatcher(vm, expOrFn, cb, options)
     }
     options = options || {}
+    // 用户自定义的Watcher
     options.user = true
     const watcher = new Watcher(vm, expOrFn, cb, options)
+    // 如果imediate为 true的话，立即执行回调函数。
     if (options.immediate) {
       cb.call(vm, watcher.value)
     }
+    //
     return function unwatchFn () {
       watcher.teardown()
     }

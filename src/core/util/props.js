@@ -26,6 +26,10 @@ export function validateProp (
 ): any {
   const prop = propOptions[key]
   const absent = !hasOwn(propsData, key)
+  // vm.$options.propsData = {
+  //   prop1: '1',
+  //   prop2: '2'
+  // }
   let value = propsData[key]
   // boolean casting
   const booleanIndex = getTypeIndex(Boolean, prop.type)
@@ -89,6 +93,7 @@ function getPropDefaultValue (vm: ?Component, prop: PropOptions, key: string): a
   }
   // call factory function for non-Function types
   // a value is Function if its prototype is function even across different execution context
+  // default 如果是function，执行返回，否则直接定义就行。
   return typeof def === 'function' && getType(prop.type) !== 'Function'
     ? def.call(vm)
     : def
@@ -178,20 +183,25 @@ function assertType (value: any, type: Function): {
  * Use function string name to check built-in types,
  * because a simple equality check will fail when running
  * across different vms / iframes.
+ * 获取函数名字
  */
 function getType (fn) {
   const match = fn && fn.toString().match(/^\s*function (\w+)/)
   return match ? match[1] : ''
 }
 
+// 参数a与参数b的函数名称相等
 function isSameType (a, b) {
   return getType(a) === getType(b)
 }
 
+//
 function getTypeIndex (type, expectedTypes): number {
+  // 非数组 类型一样 成功返回0， 失败返回-1
   if (!Array.isArray(expectedTypes)) {
     return isSameType(expectedTypes, type) ? 0 : -1
   }
+  // 数组的话， 遍历数组返回和type相等的type的下标值，失败返回-1
   for (let i = 0, len = expectedTypes.length; i < len; i++) {
     if (isSameType(expectedTypes[i], type)) {
       return i
@@ -205,6 +215,7 @@ function getInvalidTypeMessage (name, value, expectedTypes) {
     ` Expected ${expectedTypes.map(capitalize).join(', ')}`
   const expectedType = expectedTypes[0]
   const receivedType = toRawType(value)
+  // 规范化值
   const expectedValue = styleValue(value, expectedType)
   const receivedValue = styleValue(value, receivedType)
   // check if we need to specify expected value
@@ -222,6 +233,7 @@ function getInvalidTypeMessage (name, value, expectedTypes) {
 }
 
 function styleValue (value, type) {
+  // 通过type标准化value值
   if (type === 'String') {
     return `"${value}"`
   } else if (type === 'Number') {
@@ -231,11 +243,13 @@ function styleValue (value, type) {
   }
 }
 
+// valule是否包含可解释的类型，可解释类型包括 'string, 'number', 'boolean'
 function isExplicable (value) {
   const explicitTypes = ['string', 'number', 'boolean']
   return explicitTypes.some(elem => value.toLowerCase() === elem)
 }
 
+// 是否包含Boolean类型（字符串）
 function isBoolean (...args) {
   return args.some(elem => elem.toLowerCase() === 'boolean')
 }

@@ -52,7 +52,7 @@ export default class Watcher {
     isRenderWatcher?: boolean
   ) {
     this.vm = vm
-    // 渲染watcher
+    // 是否是渲染函数的观察者
     if (isRenderWatcher) {
       vm._watcher = this
     }
@@ -61,7 +61,7 @@ export default class Watcher {
     if (options) {
       // 获取options中的布尔值
       this.deep = !!options.deep
-      this.user = !!options.user
+      this.user = !!options.user // 开发者自定义
       this.lazy = !!options.lazy
       this.sync = !!options.sync
       this.before = options.before
@@ -72,7 +72,8 @@ export default class Watcher {
     this.cb = cb
     this.id = ++uid // uid for batching
     this.active = true
-    this.dirty = this.lazy // for lazy watchers
+    this.dirty = this.lazy // for lazy watchers 计算计算属性的时候 dirty才为真
+    // 避免重复收集依赖
     this.deps = []
     this.newDeps = []
     this.depIds = new Set()
@@ -96,7 +97,7 @@ export default class Watcher {
         )
       }
     }
-    // 非llazy 执行当前的get
+    // 非lazy 执行当前的get, lazy是执行计算属性的一个标志
     this.value = this.lazy
       ? undefined
       : this.get()
@@ -107,14 +108,15 @@ export default class Watcher {
    */
   get () {
     // 把当前的Watcher赋值个Dep.Target这个全局对象
+    // 在getter调用getter之前，添加Watcher到Dep.target上
     pushTarget(this)
     let value
     const vm = this.vm
     try {
-      // 调用parsePath之后的函数
+      // 调用parsePath之后的函数，对被观察的目标进行求职
       value = this.getter.call(vm, vm)
     } catch (e) {
-      // 友好提示
+      // 用户自定义友好提示
       if (this.user) {
         handleError(e, vm, `getter for watcher "${this.expression}"`)
       } else {
@@ -140,8 +142,10 @@ export default class Watcher {
   addDep (dep: Dep) {
     const id = dep.id
     if (!this.newDepIds.has(id)) {
+      // 收集新的依赖  在一次求值中避免收集重复的观察者 {{name}} {{name}}
       this.newDepIds.add(id)
       this.newDeps.push(dep)
+
       // 往Dep添加 Watcher
       if (!this.depIds.has(id)) {
         dep.addSub(this)
@@ -156,8 +160,9 @@ export default class Watcher {
   cleanupDeps () {
     let i = this.deps.length
     while (i--) {
+      //  dep是上次求值收集到的依赖
       const dep = this.deps[i]
-      // 不是新的依赖的话 把当前的Watcher清除掉
+      // 不再新的依赖列表中，观察者和Dep实例对象没有关系了, 把当前的Watcher清除掉
       if (!this.newDepIds.has(dep.id)) {
         dep.removeSub(this)
       }
@@ -182,10 +187,13 @@ export default class Watcher {
   update () {
     /* istanbul ignore else */
     if (this.lazy) {
+      // 计算属性的标志
       this.dirty = true
+      // 同步的话
     } else if (this.sync) {
       this.run()
     } else {
+      // 调用栈被清空之后按照一定的顺序执行
       queueWatcher(this)
     }
   }
@@ -197,6 +205,7 @@ export default class Watcher {
   run () {
     //
     if (this.active) {
+      // 重新求值， 重新执行渲染函数
       const value = this.get()
       // 更新值 执行回调函数
       if (
@@ -204,13 +213,17 @@ export default class Watcher {
         // Deep watchers and watchers on Object/Arrays should fire even
         // when the value is the same, because the value may
         // have mutated. 值改变
+        // var data = {obj: {a: 1}};
+        // var obj1 = data.obj.a; data.obj1.a = 2
+        // var obj2 = data.obj.a;
+        // console.log(obj1, obj2)  是对象的话，就要改变
         isObject(value) ||
         this.deep
       ) {
         // set new value
         const oldValue = this.value
         this.value = value
-        // 开启错误捕获
+        // 这个观察者是开发者自己定义Wacher的话， 自己定义回调函数
         if (this.user) {
           try {
             this.cb.call(this.vm, value, oldValue)
@@ -231,6 +244,7 @@ export default class Watcher {
    */
   evaluate () {
     this.value = this.get()
+    // 表示计算属性已经求过值了
     this.dirty = false
   }
 
@@ -256,11 +270,12 @@ export default class Watcher {
       // remove self from vm's watcher list
       // this is a somewhat expensive operation so we skip it
       // if the vm is being destroyed.
-      // 非销毁阶段
+      // 组件没有被销毁的时候  才需要移除（接触属性与观察者之间的关系）
       if (!this.vm._isBeingDestroyed) {
         remove(this.vm._watchers, this)
       }
       let i = this.deps.length
+      // 将观察者实例 从所有的Dep实例中，移除
       while (i--) {
         this.deps[i].removeSub(this)
       }

@@ -26,6 +26,7 @@ function _traverse (val: any, seen: SimpleSet) {
   }
   // 如果已经存在观察者的话，返回，否则添加对应ID
   // 如果val是数组，不走这里，所以可以在下面判断数组
+  // 避免val为循环引用的对象 引起的死循环
   if (val.__ob__) {
     const depId = val.__ob__.dep.id
     if (seen.has(depId)) {

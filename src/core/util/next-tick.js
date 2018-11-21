@@ -16,6 +16,7 @@ function flushCallbacks () {
   pending = false
   //
   const copies = callbacks.slice(0)
+  //  清空callbacks数组
   callbacks.length = 0
   for (let i = 0; i < copies.length; i++) {
     copies[i]()
@@ -70,6 +71,7 @@ if (typeof setImmediate !== 'undefined' && isNative(setImmediate)) {
   // 函数的调用
   const channel = new MessageChannel()
   const port = channel.port2
+  // 回调被注册为macro Task
   channel.port1.onmessage = flushCallbacks
   macroTimerFunc = () => {
     port.postMessage(1)
@@ -92,7 +94,7 @@ if (typeof Promise !== 'undefined' && isNative(Promise)) {
     // microtask queue but the queue isn't being flushed, until the browser
     // needs to do some other work, e.g. handle a timer. Therefore we can
     // "force" the microtask queue to be flushed by adding an empty timer.
-    // 解决iOS的then问题
+    // 触发一个macro Task 触发iOS下的micro Task
     if (isIOS) setTimeout(noop)
   }
 } else {
@@ -130,8 +132,11 @@ export function nextTick (cb?: Function, ctx?: Object) {
       _resolve(ctx)
     }
   })
+  // 回调队列是否处于 等待刷新的状态
   if (!pending) {
     pending = true
+
+    // 等到调用栈 清空之后才去执行任务队列的任务
     if (useMacroTask) {
       macroTimerFunc()
     } else {
