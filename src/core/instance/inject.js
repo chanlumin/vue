@@ -17,7 +17,7 @@ export function initProvide (vm: Component) {
 export function initInjections (vm: Component) {
   const result = resolveInject(vm.$options.inject, vm)
   if (result) {
-    // 取消监测
+    // 取消深度监测监测
     toggleObserving(false)
     Object.keys(result).forEach(key => {
       /* istanbul ignore else */
@@ -55,13 +55,20 @@ export function resolveInject (inject: any, vm: Component): ?Object {
         return Object.getOwnPropertyDescriptor(inject, key).enumerable
       })
       : Object.keys(inject)
-
+    //
+    // inject: ['data1', 'data2']
+    // {
+    //   'data1': { from: 'data1' },
+    //   'data2': { from: 'data2' }
+    // }
     for (let i = 0; i < keys.length; i++) {
       // 在mergeOption的话 就是from给 inject 添加from属性
       const key = keys[i]
       const provideKey = inject[key].from
       let source = vm
       // 往父类寻找provide
+      // source 变量的初始值为当前组件实例对象，在当前对象下找到了通过 provide 选项提供的值
+      // 不会给自身注入数据， 因为inject 选项的初始化是在 provide 初始化之前
       while (source) {
         if (source._provided && hasOwn(source._provided, provideKey)) {
           result[key] = source._provided[provideKey]
@@ -69,6 +76,7 @@ export function resolveInject (inject: any, vm: Component): ?Object {
         }
         source = source.$parent
       }
+      // 到了根部还没找到想要的值，取default值，赋值返回
       if (!source) {
         // 不存在vm 获取inject的default值
         if ('default' in inject[key]) {

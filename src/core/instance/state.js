@@ -65,6 +65,7 @@ export function initState (vm: Component) {
 function initProps (vm: Component, propsOptions: Object) {
   // propsData => 组件传入的 真实的值
   const propsData = vm.$options.propsData || {}
+  // props和vm._props有相同的引用
   const props = vm._props = {}
   // cache prop keys so that future props updates can iterate using Array
   // instead of dynamic object key enumeration.
@@ -78,10 +79,11 @@ function initProps (vm: Component, propsOptions: Object) {
   }
   for (const key in propsOptions) {
     keys.push(key)
+    // 校验Props类型
     const value = validateProp(key, propsOptions, propsData, vm)
     /* istanbul ignore else */
     if (process.env.NODE_ENV !== 'production') {
-      // 转成连字符Key
+      // 转成连字符Key 判断props中的key是否是保留关键字 给出提示
       const hyphenatedKey = hyphenate(key)
       if (isReservedAttribute(hyphenatedKey) ||
           config.isReservedAttr(hyphenatedKey)) {
@@ -90,6 +92,7 @@ function initProps (vm: Component, propsOptions: Object) {
           vm
         )
       }
+      // 非生产环境下 修改props的话 会给出友情提示
       defineReactive(props, key, value, () => {
         if (!isRoot && !isUpdatingChildComponent) {
           warn(
@@ -102,6 +105,7 @@ function initProps (vm: Component, propsOptions: Object) {
         }
       })
     } else {
+      // props深度监测
       defineReactive(props, key, value)
     }
     // static props are already proxied on the component's prototype
@@ -111,6 +115,7 @@ function initProps (vm: Component, propsOptions: Object) {
       proxy(vm, `_props`, key)
     }
   }
+  // 打开深度监测的
   toggleObserving(true)
 }
 
@@ -298,6 +303,7 @@ function initMethods (vm: Component, methods: Object) {
           vm
         )
       }
+      // 检测是否和props的key值重复
       if (props && hasOwn(props, key)) {
         warn(
           `Method "${key}" has already been defined as a prop.`,

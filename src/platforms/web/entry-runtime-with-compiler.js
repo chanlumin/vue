@@ -59,6 +59,7 @@ Vue.prototype.$mount = function (
         return this
       }
     } else if (el) {
+      // 获取整个HTML的字符串
       template = getOuterHTML(el)
     }
     // 获取到template字符串的话

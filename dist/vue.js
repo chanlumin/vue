@@ -1925,26 +1925,33 @@
     //   prop1: '1',
     //   prop2: '2'
     // }
+    // 实际传入的propsData[key]
     var value = propsData[key];
     // boolean casting
+    // Boolean.toString()
+    // "function Boolean() { [native code] }" boolean function
     var booleanIndex = getTypeIndex(Boolean, prop.type);
     if (booleanIndex > -1) {
+      // Boolean类型  没有传值 没有default值 =>默认false
       if (absent && !hasOwn(prop, 'default')) {
         value = false;
       } else if (value === '' || value === hyphenate(key)) {
         // only cast empty string / same name to boolean if
         // boolean has higher priority
+        // 已经定义Boolean 同时如果还定义String => 判断Boolean与String的优先级
         var stringIndex = getTypeIndex(String, prop.type);
         if (stringIndex < 0 || booleanIndex < stringIndex) {
           value = true;
         }
       }
     }
+
     // check default value
     if (value === undefined) {
       value = getPropDefaultValue(vm, prop, key);
       // since the default value is a fresh copy,
       // make sure to observe it.
+      //  先保存引用 监听完了之后 再还回去
       var prevShouldObserve = shouldObserve;
       toggleObserving(true);
       observe(value);
@@ -1958,6 +1965,7 @@
 
   /**
    * Get the default value of a prop.
+   * 获取默认的 prop值
    */
   function getPropDefaultValue (vm, prop, key) {
     // no default, return undefined
@@ -1965,6 +1973,7 @@
       return undefined
     }
     var def = prop.default;
+
     // warn against non-factory defaults for Object & Array
     if (isObject(def)) {
       warn(
@@ -1976,6 +1985,8 @@
     }
     // the raw prop value was also undefined from previous render,
     // return previous default value to avoid unnecessary watcher trigger
+    // updateChildComponent
+    // vm.$options.propsData 上一次组件创建或者上一次更新的数据
     if (vm && vm.$options.propsData &&
       vm.$options.propsData[key] === undefined &&
       vm._props[key] !== undefined
@@ -1984,7 +1995,7 @@
     }
     // call factory function for non-Function types
     // a value is Function if its prototype is function even across different execution context
-    // default 如果是function，执行返回，否则直接定义就行。
+    // default 如果是function 并且prop中的type要求是function的话, 直接返回 ，否则调用返回
     return typeof def === 'function' && getType(prop.type) !== 'Function'
       ? def.call(vm)
       : def
@@ -2000,6 +2011,7 @@
     vm,
     absent
   ) {
+    //  props缺失
     if (prop.required && absent) {
       warn(
         'Missing required prop: "' + name + '"',
@@ -2007,10 +2019,17 @@
       );
       return
     }
+    // 不做判断
     if (value == null && !prop.required) {
       return
     }
     var type = prop.type;
+    // props: {
+    // props1: {
+    //    type: [String, Boolean],
+    //    default: 1
+    // }}
+    //  valid 表示type没有定义从传入什么值都型
     var valid = !type || type === true;
     var expectedTypes = [];
     if (type) {
@@ -2031,6 +2050,7 @@
       );
       return
     }
+    // 自校验props
     var validator = prop.validator;
     if (validator) {
       if (!validator(value)) {
@@ -2049,9 +2069,12 @@
     var expectedType = getType(type);
     if (simpleCheckRE.test(expectedType)) {
       var t = typeof value;
+
       valid = t === expectedType.toLowerCase();
       // for primitive wrapper objects
+      // const str = new String('基本包装类型')  => typeof str === 'object' !== String 类型
       if (!valid && t === 'object') {
+        // instanceof 类型是否相等
         valid = value instanceof type;
       }
     } else if (expectedType === 'Object') {
@@ -2059,8 +2082,21 @@
     } else if (expectedType === 'Array') {
       valid = Array.isArray(value);
     } else {
+      // 自定义类型构造函数
+      // function Dog () {}
+      //
+      // props: {
+      //   prop1: {
+      //     type: Dog
+      //   }
+      // }
+
       valid = value instanceof type;
     }
+    //{
+    //   expectedType: 'String',
+    //   valid: true
+    // }
     return {
       valid: valid,
       expectedType: expectedType
@@ -2071,6 +2107,10 @@
    * Use function string name to check built-in types,
    * because a simple equality check will fail when running
    * across different vms / iframes.
+   * iframes / vms 之间 不管用 不同的iframes中的Array构造函数是不同的
+   * 用字符串对比 保证简单类型的对比相等
+
+
    * 获取函数名字
    */
   function getType (fn) {
@@ -2090,6 +2130,15 @@
       return isSameType(expectedTypes, type) ? 0 : -1
     }
     // 数组的话， 遍历数组返回和type相等的type的下标值，失败返回-1
+    // props: {
+    //   prop1: [Number, String]
+    // }
+    // 规范化
+    // propOptions = {
+    //   prop1: {
+    //     type: [Number, String]
+    //   }
+    // }
     for (var i = 0, len = expectedTypes.length; i < len; i++) {
       if (isSameType(expectedTypes[i], type)) {
         return i
@@ -3919,6 +3968,7 @@
   function initProps (vm, propsOptions) {
     // propsData => 组件传入的 真实的值
     var propsData = vm.$options.propsData || {};
+    // props和vm._props有相同的引用
     var props = vm._props = {};
     // cache prop keys so that future props updates can iterate using Array
     // instead of dynamic object key enumeration.
@@ -3932,10 +3982,11 @@
     }
     var loop = function ( key ) {
       keys.push(key);
+      // 校验Props类型
       var value = validateProp(key, propsOptions, propsData, vm);
       /* istanbul ignore else */
       {
-        // 转成连字符Key
+        // 转成连字符Key 判断props中的key是否是保留关键字 给出提示
         var hyphenatedKey = hyphenate(key);
         if (isReservedAttribute(hyphenatedKey) ||
             config.isReservedAttr(hyphenatedKey)) {
@@ -3944,6 +3995,7 @@
             vm
           );
         }
+        // 非生产环境下 修改props的话 会给出友情提示
         defineReactive$$1(props, key, value, function () {
           if (!isRoot && !isUpdatingChildComponent) {
             warn(
@@ -3965,6 +4017,7 @@
     };
 
     for (var key in propsOptions) loop( key );
+    // 打开深度监测的
     toggleObserving(true);
   }
 
@@ -4151,6 +4204,7 @@
             vm
           );
         }
+        // 检测是否和props的key值重复
         if (props && hasOwn(props, key)) {
           warn(
             ("Method \"" + key + "\" has already been defined as a prop."),
@@ -4280,7 +4334,7 @@
   function initInjections (vm) {
     var result = resolveInject(vm.$options.inject, vm);
     if (result) {
-      // 取消监测
+      // 取消深度监测监测
       toggleObserving(false);
       Object.keys(result).forEach(function (key) {
         /* istanbul ignore else */
@@ -4316,13 +4370,20 @@
           return Object.getOwnPropertyDescriptor(inject, key).enumerable
         })
         : Object.keys(inject);
-
+      //
+      // inject: ['data1', 'data2']
+      // {
+      //   'data1': { from: 'data1' },
+      //   'data2': { from: 'data2' }
+      // }
       for (var i = 0; i < keys.length; i++) {
         // 在mergeOption的话 就是from给 inject 添加from属性
         var key = keys[i];
         var provideKey = inject[key].from;
         var source = vm;
         // 往父类寻找provide
+        // source 变量的初始值为当前组件实例对象，在当前对象下找到了通过 provide 选项提供的值
+        // 不会给自身注入数据， 因为inject 选项的初始化是在 provide 初始化之前
         while (source) {
           if (source._provided && hasOwn(source._provided, provideKey)) {
             result[key] = source._provided[provideKey];
@@ -4330,6 +4391,7 @@
           }
           source = source.$parent;
         }
+        // 到了根部还没找到想要的值，取default值，赋值返回
         if (!source) {
           // 不存在vm 获取inject的default值
           if ('default' in inject[key]) {
@@ -11528,6 +11590,7 @@
     template,
     options
   ) {
+    // 生成ast
     var ast = parse(template.trim(), options);
     if (options.optimize !== false) {
       optimize(ast, options);
@@ -11619,6 +11682,7 @@
           return this
         }
       } else if (el) {
+        // 获取整个HTML的字符串
         template = getOuterHTML(el);
       }
       // 获取到template字符串的话
