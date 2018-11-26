@@ -20,6 +20,7 @@ export function genClassForVnode (vnode: VNodeWithData): string {
   return renderClass(data.staticClass, data.class)
 }
 
+// 合并父VNode和子VNode的staticClass
 function mergeClassData (child: VNodeData, parent: VNodeData): {
   staticClass: string,
   class: any

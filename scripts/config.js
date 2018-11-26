@@ -100,7 +100,8 @@ const builds = {
     format: 'umd',
     env: 'development',
     alias: { he: './entity-decoder' },
-    banner
+    banner,
+    sourceMap: true
   },
   // Runtime+compiler production build  (Browser)
   'web-full-prod': {
@@ -205,7 +206,6 @@ function genConfig (name) {
       format: opts.format,
       banner: opts.banner,
       name: opts.moduleName || 'Vue',
-      sourceMap: true,
     },
     onwarn: (msg, warn) => {
       if (!/Circular/.test(msg)) {

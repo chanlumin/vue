@@ -7,8 +7,9 @@
 </head>
 <body>
   <div id="app">
-    <passage-list content="文章一"></passage-list>
-    <passage-list content="文章二"></passage-list>
+    <!--proc-c 要用hypenate去传递-->
+    <passage-list content="文章一" prop-c="C"></passage-list>
+    <passage-list content="文章二" prop-c="C"></passage-list>
     <!--<passage-list content="文章三"></passage-list>-->
     <!--<passage-list content="文章四"></passage-list>-->
     {{msg}}
@@ -58,7 +59,8 @@
       el: '#app',
       data() {
         return {
-          msg: 'hello world'
+          msg: 'hello world',
+          C: 'hi'
         }
       }
 

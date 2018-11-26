@@ -16,9 +16,10 @@ export const mustUseProp = (tag: string, type: ?string, attr: string): boolean =
     (attr === 'muted' && tag === 'video')
   )
 }
-
+// 可迭代属性
 export const isEnumeratedAttr = makeMap('contenteditable,draggable,spellcheck')
 
+// 失误只有正确和错误值这两种属性
 export const isBooleanAttr = makeMap(
   'allowfullscreen,async,autofocus,autoplay,checked,compact,controls,declare,' +
   'default,defaultchecked,defaultmuted,defaultselected,defer,disabled,' +
@@ -34,10 +35,13 @@ export const isXlink = (name: string): boolean => {
   return name.charAt(5) === ':' && name.slice(0, 5) === 'xlink'
 }
 
+{/*<homepage xlink:type="simple" xlink:href="http://www.w3.org">Visit W3C</homepage>*/}
 export const getXlinkProp = (name: string): string => {
   return isXlink(name) ? name.slice(6, name.length) : ''
 }
 
+
+// 是否是错误的值
 export const isFalsyAttrValue = (val: any): boolean => {
   return val == null || val === false
 }

@@ -13,23 +13,41 @@ import { makeMap, no } from 'shared/util'
 import { isNonPhrasingTag } from 'web/compiler/util'
 
 // Regular Expressions for parsing tags and attributes
+// 匹配如右四种字符串 class="class"   class='class'  class=class   disabled ?:不捕获
 const attribute = /^\s*([^\s"'<>\/=]+)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/
 // could use https://www.w3.org/TR/1999/REC-xml-names-19990114/#NT-QName
 // but for Vue templates we can enforce a simple charset
+// 的XML标签名应该是由 前缀、冒号(:) 以及 标签名称 组成的：<前缀:标签名称>
+// <k:bug xmlns:k="http://www.xxx.com/xxx"></k:bug>
+// ncname 的全称是 An XML name that does not contain a colon (:)
+// 双\\ 表示\直接对 \ 进行转义
+// 第二个匹配[字母下划线-.]
 const ncname = '[a-zA-Z_][\\w\\-\\.]*'
+
+// k:hello  =>  qname匹配合法的XML标签
 const qnameCapture = `((?:${ncname}\\:)?${ncname})`
+
+// 匹配 <k:hello
 const startTagOpen = new RegExp(`^<${qnameCapture}`)
+// 匹配 > 或者/> 问号表示出现的次数是0或者1次
 const startTagClose = /^\s*(\/?)>/
+// 匹配</k:hello>
 const endTag = new RegExp(`^<\\/${qnameCapture}[^>]*>`)
+// 撇皮<!DOCTYPE htmlxxx>  不区分大小写
 const doctype = /^<!DOCTYPE [^>]+>/i
 // #7298: escape - to avoid being pased as HTML comment when inlined in page
+// 匹配 <!--
+// <!\--为了把Vue代码内联到html，所以加了个小转义。否则 <!-- 会被认为是注释节点
 const comment = /^<!\--/
+// 匹配<![
 const conditionalComment = /^<!\[/
 
 // Special Elements (can contain anything)
+// 是否是script style textarea 纯文本标签
 export const isPlainTextElement = makeMap('script,style,textarea', true)
 const reCache = {}
 
+// 实体和字符串
 const decodingMap = {
   '&lt;': '<',
   '&gt;': '>',
@@ -38,14 +56,21 @@ const decodingMap = {
   '&#10;': '\n',
   '&#9;': '\t'
 }
+// 匹配 &lt;、&gt;、&quot;、&amp;
 const encodedAttr = /&(?:lt|gt|quot|amp);/g
+// &lt || &gt || &quot || &amp || &#10 || &#9
 const encodedAttrWithNewLines = /&(?:lt|gt|quot|amp|#10|#9);/g
 
 // #5992
+// 标签是 pre 或者 textarea 且 标签内容的第一个字符是换行符，则返回 true，否则为 false
+// 浏览器在实现textarea的时候 会忽略第一个换行符
 const isIgnoreNewlineTag = makeMap('pre,textarea', true)
+// pre和textarea应该忽略第一个换行符
 const shouldIgnoreFirstNewline = (tag, html) => tag && isIgnoreNewlineTag(tag) && html[0] === '\n'
 
+// 解析属性值
 function decodeAttr (value, shouldDecodeNewlines) {
+  // encodeAttrWithNewLines多了两个属性
   const re = shouldDecodeNewlines ? encodedAttrWithNewLines : encodedAttr
   return value.replace(re, match => decodingMap[match])
 }

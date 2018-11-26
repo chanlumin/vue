@@ -5854,9 +5854,10 @@
       (attr === 'muted' && tag === 'video')
     )
   };
-
+  // 可迭代属性
   var isEnumeratedAttr = makeMap('contenteditable,draggable,spellcheck');
 
+  // 失误只有正确和错误值这两种属性
   var isBooleanAttr = makeMap(
     'allowfullscreen,async,autofocus,autoplay,checked,compact,controls,declare,' +
     'default,defaultchecked,defaultmuted,defaultselected,defer,disabled,' +
@@ -5871,11 +5872,12 @@
   var isXlink = function (name) {
     return name.charAt(5) === ':' && name.slice(0, 5) === 'xlink'
   };
-
   var getXlinkProp = function (name) {
     return isXlink(name) ? name.slice(6, name.length) : ''
   };
 
+
+  // 是否是错误的值
   var isFalsyAttrValue = function (val) {
     return val == null || val === false
   };
@@ -5900,6 +5902,7 @@
     return renderClass(data.staticClass, data.class)
   }
 
+  // 合并父VNode和子VNode的staticClass
   function mergeClassData (child, parent) {
     return {
       staticClass: concat(child.staticClass, parent.staticClass),
@@ -9510,23 +9513,41 @@
    */
 
   // Regular Expressions for parsing tags and attributes
+  // 匹配如右四种字符串 class="class"   class='class'  class=class   disabled ?:不捕获
   var attribute = /^\s*([^\s"'<>\/=]+)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/;
   // could use https://www.w3.org/TR/1999/REC-xml-names-19990114/#NT-QName
   // but for Vue templates we can enforce a simple charset
+  // 的XML标签名应该是由 前缀、冒号(:) 以及 标签名称 组成的：<前缀:标签名称>
+  // <k:bug xmlns:k="http://www.xxx.com/xxx"></k:bug>
+  // ncname 的全称是 An XML name that does not contain a colon (:)
+  // 双\\ 表示\直接对 \ 进行转义
+  // 第二个匹配[字母下划线-.]
   var ncname = '[a-zA-Z_][\\w\\-\\.]*';
+
+  // k:hello  =>  qname匹配合法的XML标签
   var qnameCapture = "((?:" + ncname + "\\:)?" + ncname + ")";
+
+  // 匹配 <k:hello
   var startTagOpen = new RegExp(("^<" + qnameCapture));
+  // 匹配 > 或者/> 问号表示出现的次数是0或者1次
   var startTagClose = /^\s*(\/?)>/;
+  // 匹配</k:hello>
   var endTag = new RegExp(("^<\\/" + qnameCapture + "[^>]*>"));
+  // 撇皮<!DOCTYPE htmlxxx>  不区分大小写
   var doctype = /^<!DOCTYPE [^>]+>/i;
   // #7298: escape - to avoid being pased as HTML comment when inlined in page
+  // 匹配 <!--
+  // <!\--为了把Vue代码内联到html，所以加了个小转义。否则 <!-- 会被认为是注释节点
   var comment = /^<!\--/;
+  // 匹配<![
   var conditionalComment = /^<!\[/;
 
   // Special Elements (can contain anything)
+  // 是否是script style textarea 纯文本标签
   var isPlainTextElement = makeMap('script,style,textarea', true);
   var reCache = {};
 
+  // 实体和字符串
   var decodingMap = {
     '&lt;': '<',
     '&gt;': '>',
@@ -9535,14 +9556,21 @@
     '&#10;': '\n',
     '&#9;': '\t'
   };
+  // 匹配 &lt;、&gt;、&quot;、&amp;
   var encodedAttr = /&(?:lt|gt|quot|amp);/g;
+  // &lt || &gt || &quot || &amp || &#10 || &#9
   var encodedAttrWithNewLines = /&(?:lt|gt|quot|amp|#10|#9);/g;
 
   // #5992
+  // 标签是 pre 或者 textarea 且 标签内容的第一个字符是换行符，则返回 true，否则为 false
+  // 浏览器在实现textarea的时候 会忽略第一个换行符
   var isIgnoreNewlineTag = makeMap('pre,textarea', true);
+  // pre和textarea应该忽略第一个换行符
   var shouldIgnoreFirstNewline = function (tag, html) { return tag && isIgnoreNewlineTag(tag) && html[0] === '\n'; };
 
+  // 解析属性值
   function decodeAttr (value, shouldDecodeNewlines) {
+    // encodeAttrWithNewLines多了两个属性
     var re = shouldDecodeNewlines ? encodedAttrWithNewLines : encodedAttr;
     return value.replace(re, function (match) { return decodingMap[match]; })
   }
@@ -10555,13 +10583,13 @@
     expectHTML: true,
     modules: modules$1,
     directives: directives$1,
-    isPreTag: isPreTag,
-    isUnaryTag: isUnaryTag,
-    mustUseProp: mustUseProp,
-    canBeLeftOpenTag: canBeLeftOpenTag,
-    isReservedTag: isReservedTag,
-    getTagNamespace: getTagNamespace,
-    staticKeys: genStaticKeys(modules$1)
+    isPreTag: isPreTag, // 是否是<pre> 标签
+    isUnaryTag: isUnaryTag, // 是否是元标签
+    mustUseProp: mustUseProp, // 是否需要用props进行绑定
+    canBeLeftOpenTag: canBeLeftOpenTag, // 可以自闭合的标签 比如<p>哈哈哈哈 浏览器会自动进行补全
+    isReservedTag: isReservedTag, // 否是是保留标签
+    getTagNamespace: getTagNamespace, // 获取元素标签的命名空间
+    staticKeys: genStaticKeys(modules$1) // 萃取staticKeys
   };
 
   /*  */
@@ -11434,6 +11462,12 @@
 
 
 
+  /**
+   * 创建一个function 类似于eval的功能。
+   * @param code
+   * @param errors
+   * @returns {*}
+   */
   function createFunction (code, errors) {
     try {
       return new Function(code)
@@ -11457,7 +11491,10 @@
 
       /* istanbul ignore if */
       {
+        // 内容安全策略   (CSP) 是一个额外的安全层，用于检测并削弱某些特定类型的攻击
+        // ，包括跨站脚本 (XSS) 和数据注入攻击等。无论是数据盗取、网站内容污染还是散发恶意软件
         // detect possible CSP restriction
+        // 检测new Function是否可用
         try {
           new Function('return 1');
         } catch (e) {
@@ -11473,15 +11510,16 @@
         }
       }
 
-      // check cache
+      // check cache ['a','b','c','d']
+      // String['a','b','c','d'] => 'a,b,c,d'
+      // 默认options.delimiters是没有的, 所以key就是一个模板字符串
       var key = options.delimiters
         ? String(options.delimiters) + template
         : template;
       if (cache[key]) {
         return cache[key]
       }
-
-      // compile
+      // compile 将模板字符串 转成渲染函数字符串
       var compiled = compile(template, options);
 
       // check compilation errors/tips
@@ -11502,6 +11540,7 @@
       var res = {};
       var fnGenErrors = [];
       res.render = createFunction(compiled.render, fnGenErrors);
+      // staticRenderFns主要用于渲染 优化
       res.staticRenderFns = compiled.staticRenderFns.map(function (code) {
         return createFunction(code, fnGenErrors)
       });
@@ -11524,6 +11563,7 @@
           );
         }
       }
+      // 缓存模板字符串编译结果优化性能
 
       return (cache[key] = res)
     }
@@ -11531,12 +11571,16 @@
 
   /*  */
 
+  // 通过它可以创造出不同的编译器。同用一份错误处理代码
   function createCompilerCreator (baseCompile) {
     return function createCompiler (baseOptions) {
       function compile (
         template,
         options
       ) {
+
+
+        // 封装了一些通用的错误处理代码
         var finalOptions = Object.create(baseOptions);
         var errors = [];
         var tips = [];
@@ -11563,6 +11607,7 @@
               finalOptions[key] = options[key];
             }
           }
+
         }
 
         var compiled = baseCompile(template, finalOptions);
@@ -11574,6 +11619,8 @@
         return compiled
       }
 
+      // compile生成字符串代码
+      // compileToFunctions 生成可执行代码
       return {
         compile: compile,
         compileToFunctions: createCompileToFunctionFn(compile)
@@ -11586,6 +11633,7 @@
   // `createCompilerCreator` allows creating compilers that use alternative
   // parser/optimizer/codegen, e.g the SSR optimizing compiler.
   // Here we just export a default compiler using the default parts.
+  // 返回createCompiler 而这个createCompiler 最终会返回一个compile 一个compilerToFunction
   var createCompiler = createCompilerCreator(function baseCompile (
     template,
     options

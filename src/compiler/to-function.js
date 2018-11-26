@@ -8,6 +8,12 @@ type CompiledFunctionResult = {
   staticRenderFns: Array<Function>;
 };
 
+/**
+ * 创建一个function 类似于eval的功能。
+ * @param code
+ * @param errors
+ * @returns {*}
+ */
 function createFunction (code, errors) {
   try {
     return new Function(code)
@@ -31,7 +37,10 @@ export function createCompileToFunctionFn (compile: Function): Function {
 
     /* istanbul ignore if */
     if (process.env.NODE_ENV !== 'production') {
+      // 内容安全策略   (CSP) 是一个额外的安全层，用于检测并削弱某些特定类型的攻击
+      // ，包括跨站脚本 (XSS) 和数据注入攻击等。无论是数据盗取、网站内容污染还是散发恶意软件
       // detect possible CSP restriction
+      // 检测new Function是否可用
       try {
         new Function('return 1')
       } catch (e) {
@@ -47,15 +56,16 @@ export function createCompileToFunctionFn (compile: Function): Function {
       }
     }
 
-    // check cache
+    // check cache ['a','b','c','d']
+    // String['a','b','c','d'] => 'a,b,c,d'
+    // 默认options.delimiters是没有的, 所以key就是一个模板字符串
     const key = options.delimiters
       ? String(options.delimiters) + template
       : template
     if (cache[key]) {
       return cache[key]
     }
-
-    // compile
+    // compile 将模板字符串 转成渲染函数字符串
     const compiled = compile(template, options)
 
     // check compilation errors/tips
@@ -76,6 +86,7 @@ export function createCompileToFunctionFn (compile: Function): Function {
     const res = {}
     const fnGenErrors = []
     res.render = createFunction(compiled.render, fnGenErrors)
+    // staticRenderFns主要用于渲染 优化
     res.staticRenderFns = compiled.staticRenderFns.map(code => {
       return createFunction(code, fnGenErrors)
     })
@@ -93,6 +104,7 @@ export function createCompileToFunctionFn (compile: Function): Function {
         )
       }
     }
+    // 缓存模板字符串编译结果优化性能
 
     return (cache[key] = res)
   }

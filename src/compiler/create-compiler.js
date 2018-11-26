@@ -4,12 +4,16 @@ import { extend } from 'shared/util'
 import { detectErrors } from './error-detector'
 import { createCompileToFunctionFn } from './to-function'
 
+// 通过它可以创造出不同的编译器。同用一份错误处理代码
 export function createCompilerCreator (baseCompile: Function): Function {
   return function createCompiler (baseOptions: CompilerOptions) {
     function compile (
       template: string,
       options?: CompilerOptions
     ): CompiledResult {
+
+
+      // 封装了一些通用的错误处理代码
       const finalOptions = Object.create(baseOptions)
       const errors = []
       const tips = []
@@ -36,6 +40,7 @@ export function createCompilerCreator (baseCompile: Function): Function {
             finalOptions[key] = options[key]
           }
         }
+
       }
 
       const compiled = baseCompile(template, finalOptions)
@@ -47,6 +52,8 @@ export function createCompilerCreator (baseCompile: Function): Function {
       return compiled
     }
 
+    // compile生成字符串代码
+    // compileToFunctions 生成可执行代码
     return {
       compile,
       compileToFunctions: createCompileToFunctionFn(compile)
