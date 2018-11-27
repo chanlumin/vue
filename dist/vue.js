@@ -9578,13 +9578,16 @@
   function parseHTML (html, options) {
     var stack = [];
     var expectHTML = options.expectHTML;
+    // 初始化 返回no 始终返回
     var isUnaryTag$$1 = options.isUnaryTag || no;
     var canBeLeftOpenTag$$1 = options.canBeLeftOpenTag || no;
     var index = 0;
+    // lastTag保存着栈顶的元素
     var last, lastTag;
     while (html) {
       last = html;
       // Make sure we're not in a plaintext content element like script/style
+      // 没有拿到的栈顶的非一元标签的开始标签 也不是纯文本内容标签元素 比如 script/style的haul
       if (!lastTag || !isPlainTextElement(lastTag)) {
         var textEnd = html.indexOf('<');
         if (textEnd === 0) {
@@ -9593,15 +9596,18 @@
             var commentEnd = html.indexOf('-->');
 
             if (commentEnd >= 0) {
+              // 处理注释文本
               if (options.shouldKeepComment) {
                 options.comment(html.substring(4, commentEnd));
               }
+              // 指针移动到去除注释节点之后的位置
               advance(commentEnd + 3);
               continue
             }
           }
 
           // http://en.wikipedia.org/wiki/Conditional_comment#Downlevel-revealed_conditional_comment
+          // 处理条件注释节点 <! [ ]>
           if (conditionalComment.test(html)) {
             var conditionalEnd = html.indexOf(']>');
 
@@ -9618,7 +9624,7 @@
             continue
           }
 
-          // End tag:
+          // End tag: </a:bbbb>  </ddd>
           var endTagMatch = html.match(endTag);
           if (endTagMatch) {
             var curIndex = index;
@@ -9640,7 +9646,9 @@
 
         var text = (void 0), rest = (void 0), next = (void 0);
         if (textEnd >= 0) {
+          // html = '0<1<2'  textEnd = 1
           rest = html.slice(textEnd);
+          //
           while (
             !endTag.test(rest) &&
             !startTagOpen.test(rest) &&
@@ -9648,33 +9656,43 @@
             !conditionalComment.test(rest)
           ) {
             // < in plain text, be forgiving and treat it as text
+            // rest =  <1<2  => next = 2
             next = rest.indexOf('<', 1);
+
             if (next < 0) { break }
+            // textEnd = 3
             textEnd += next;
+            // <2
             rest = html.slice(textEnd);
           }
+          // text => 0<1
           text = html.substring(0, textEnd);
           advance(textEnd);
         }
-
+        // 将整个文本作为字符串处理
         if (textEnd < 0) {
           text = html;
           html = '';
         }
-
+        // 被当成纯文本处理
         if (options.chars && text) {
           options.chars(text);
         }
       } else {
+        // 在纯文本标签里
+        // 保存纯文本标签闭合标签的字符长度
         var endTagLength = 0;
         var stackedTag = lastTag.toLowerCase();
+        // reStackedTag 的作用是用来匹配纯文本标签的内容以及结束标签
+        // *? 懒惰模式 只要第二个分组匹配成功停止匹配
         var reStackedTag = reCache[stackedTag] || (reCache[stackedTag] = new RegExp('([\\s\\S]*?)(</' + stackedTag + '[^>]*>)', 'i'));
         var rest$1 = html.replace(reStackedTag, function (all, text, endTag) {
+          // all => 整个文本标签  text 匹配的文本 endTag 结束的标签
           endTagLength = endTag.length;
           if (!isPlainTextElement(stackedTag) && stackedTag !== 'noscript') {
             text = text
-              .replace(/<!\--([\s\S]*?)-->/g, '$1') // #7298
-              .replace(/<!\[CDATA\[([\s\S]*?)]]>/g, '$1');
+              .replace(/<!\--([\s\S]*?)-->/g, '$1') // #7298 <! -- 空格字符串+非空格字符串 -->
+              .replace(/<!\[CDATA\[([\s\S]*?)]]>/g, '$1'); // <! [CDATA[dsfasdf]]>
           }
           if (shouldIgnoreFirstNewline(stackedTag, text)) {
             text = text.slice(1);
@@ -9684,11 +9702,14 @@
           }
           return ''
         });
+        // rest 剩余的文本标签
         index += html.length - rest$1.length;
         html = rest$1;
+        //parseEndTag 函数解析纯文本标签的结束标签
         parseEndTag(stackedTag, index - endTagLength, index);
       }
 
+      // 一次循环后 文本标签没有变化 => 把html当做纯字符串
       if (html === last) {
         options.chars && options.chars(html);
         if (!stack.length && options.warn) {
@@ -9707,6 +9728,7 @@
     }
 
     function parseStartTag () {
+      // 匹配  <k:hello 或 <hello
       var start = html.match(startTagOpen);
       if (start) {
         var match = {
@@ -9716,14 +9738,22 @@
         };
         advance(start[0].length);
         var end, attr;
+        // startTagClose 要求以空格 或者以  / 或者以>开头的 所以不是结尾标签
+        // 匹配属性
         while (!(end = html.match(startTagClose)) && (attr = html.match(attribute))) {
           advance(attr[0].length);
           match.attrs.push(attr);
         }
         if (end) {
+          // unary 一元的 / 比如 <br/> 匹配到 [/>, /]
           match.unarySlash = end[1];
           advance(end[0].length);
           match.end = index;
+          // attrs: [Array(6)]
+          // end: 14
+          // start: 0
+          // tagName: "div"
+          // unarySlash: ""
           return match
         }
       }
@@ -9742,12 +9772,19 @@
         }
       }
 
+      // 第二个判断 是否包含 / 标签  <my-component />
       var unary = isUnaryTag$$1(tagName) || !!unarySlash;
 
       var l = match.attrs.length;
       var attrs = new Array(l);
       for (var i = 0; i < l; i++) {
         var args = match.attrs[i];
+        // 0: " id="app""
+        // 1: "id"
+        // 2: "="
+        // 3: "app"
+        // 4: undefined
+        // 5: undefined
         var value = args[3] || args[4] || args[5] || '';
         var shouldDecodeNewlines = tagName === 'a' && args[1] === 'href'
           ? options.shouldDecodeNewlinesForHref
@@ -9757,7 +9794,8 @@
           value: decodeAttr(value, shouldDecodeNewlines)
         };
       }
-
+      // 非一元标签  把tag push进去栈顶
+      // lastTag保持非一元标签的最新引用
       if (!unary) {
         stack.push({ tag: tagName, lowerCasedTag: tagName.toLowerCase(), attrs: attrs });
         lastTag = tagName;
@@ -9774,6 +9812,7 @@
       if (end == null) { end = index; }
 
       // Find the closest opened tag of the same type
+      // 知道栈中与tag标签最相近的位置 pos
       if (tagName) {
         lowerCasedTagName = tagName.toLowerCase();
         for (pos = stack.length - 1; pos >= 0; pos--) {
@@ -9785,7 +9824,7 @@
         // If no tag name is provided, clean shop
         pos = 0;
       }
-
+      // 没有提Tag name的话
       if (pos >= 0) {
         // Close all the open elements, up the stack
         for (var i = stack.length - 1; i >= pos; i--) {
@@ -9797,6 +9836,7 @@
             );
           }
           if (options.end) {
+            // 闭合一元缺失标签
             options.end(stack[i].tag, start, end);
           }
         }
@@ -9805,10 +9845,13 @@
         stack.length = pos;
         lastTag = pos && stack[pos - 1].tag;
       } else if (lowerCasedTagName === 'br') {
+      // </br> 和 </p> 标签浏览器可以将其正常解析为 <br> 以及 <p></p>，而对于 </div> 浏览器会将其忽略
         if (options.start) {
           options.start(tagName, [], true, start, end);
         }
       } else if (lowerCasedTagName === 'p') {
+        // 处理P标签
+        // options.start
         if (options.start) {
           options.start(tagName, [], false, start, end);
         }

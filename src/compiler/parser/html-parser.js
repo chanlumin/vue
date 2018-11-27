@@ -78,13 +78,16 @@ function decodeAttr (value, shouldDecodeNewlines) {
 export function parseHTML (html, options) {
   const stack = []
   const expectHTML = options.expectHTML
+  // 初始化 返回no 始终返回
   const isUnaryTag = options.isUnaryTag || no
   const canBeLeftOpenTag = options.canBeLeftOpenTag || no
   let index = 0
+  // lastTag保存着栈顶的元素
   let last, lastTag
   while (html) {
     last = html
     // Make sure we're not in a plaintext content element like script/style
+    // 没有拿到的栈顶的非一元标签的开始标签 也不是纯文本内容标签元素 比如 script/style的haul
     if (!lastTag || !isPlainTextElement(lastTag)) {
       let textEnd = html.indexOf('<')
       if (textEnd === 0) {
@@ -93,15 +96,18 @@ export function parseHTML (html, options) {
           const commentEnd = html.indexOf('-->')
 
           if (commentEnd >= 0) {
+            // 处理注释文本
             if (options.shouldKeepComment) {
               options.comment(html.substring(4, commentEnd))
             }
+            // 指针移动到去除注释节点之后的位置
             advance(commentEnd + 3)
             continue
           }
         }
 
         // http://en.wikipedia.org/wiki/Conditional_comment#Downlevel-revealed_conditional_comment
+        // 处理条件注释节点 <! [ ]>
         if (conditionalComment.test(html)) {
           const conditionalEnd = html.indexOf(']>')
 
@@ -118,7 +124,7 @@ export function parseHTML (html, options) {
           continue
         }
 
-        // End tag:
+        // End tag: </a:bbbb>  </ddd>
         const endTagMatch = html.match(endTag)
         if (endTagMatch) {
           const curIndex = index
@@ -140,7 +146,9 @@ export function parseHTML (html, options) {
 
       let text, rest, next
       if (textEnd >= 0) {
+        // html = '0<1<2'  textEnd = 1
         rest = html.slice(textEnd)
+        //
         while (
           !endTag.test(rest) &&
           !startTagOpen.test(rest) &&
@@ -148,33 +156,43 @@ export function parseHTML (html, options) {
           !conditionalComment.test(rest)
         ) {
           // < in plain text, be forgiving and treat it as text
+          // rest =  <1<2  => next = 2
           next = rest.indexOf('<', 1)
+
           if (next < 0) break
+          // textEnd = 3
           textEnd += next
+          // <2
           rest = html.slice(textEnd)
         }
+        // text => 0<1
         text = html.substring(0, textEnd)
         advance(textEnd)
       }
-
+      // 将整个文本作为字符串处理
       if (textEnd < 0) {
         text = html
         html = ''
       }
-
+      // 被当成纯文本处理
       if (options.chars && text) {
         options.chars(text)
       }
     } else {
+      // 在纯文本标签里
+      // 保存纯文本标签闭合标签的字符长度
       let endTagLength = 0
       const stackedTag = lastTag.toLowerCase()
+      // reStackedTag 的作用是用来匹配纯文本标签的内容以及结束标签
+      // *? 懒惰模式 只要第二个分组匹配成功停止匹配
       const reStackedTag = reCache[stackedTag] || (reCache[stackedTag] = new RegExp('([\\s\\S]*?)(</' + stackedTag + '[^>]*>)', 'i'))
       const rest = html.replace(reStackedTag, function (all, text, endTag) {
+        // all => 整个文本标签  text 匹配的文本 endTag 结束的标签
         endTagLength = endTag.length
         if (!isPlainTextElement(stackedTag) && stackedTag !== 'noscript') {
           text = text
-            .replace(/<!\--([\s\S]*?)-->/g, '$1') // #7298
-            .replace(/<!\[CDATA\[([\s\S]*?)]]>/g, '$1')
+            .replace(/<!\--([\s\S]*?)-->/g, '$1') // #7298 <! -- 空格字符串+非空格字符串 -->
+            .replace(/<!\[CDATA\[([\s\S]*?)]]>/g, '$1') // <! [CDATA[dsfasdf]]>
         }
         if (shouldIgnoreFirstNewline(stackedTag, text)) {
           text = text.slice(1)
@@ -184,11 +202,14 @@ export function parseHTML (html, options) {
         }
         return ''
       })
+      // rest 剩余的文本标签
       index += html.length - rest.length
       html = rest
+      //parseEndTag 函数解析纯文本标签的结束标签
       parseEndTag(stackedTag, index - endTagLength, index)
     }
 
+    // 一次循环后 文本标签没有变化 => 把html当做纯字符串
     if (html === last) {
       options.chars && options.chars(html)
       if (process.env.NODE_ENV !== 'production' && !stack.length && options.warn) {
@@ -207,6 +228,7 @@ export function parseHTML (html, options) {
   }
 
   function parseStartTag () {
+    // 匹配  <k:hello 或 <hello
     const start = html.match(startTagOpen)
     if (start) {
       const match = {
@@ -216,14 +238,22 @@ export function parseHTML (html, options) {
       }
       advance(start[0].length)
       let end, attr
+      // startTagClose 要求以空格 或者以  / 或者以>开头的 所以不是结尾标签
+      // 匹配属性
       while (!(end = html.match(startTagClose)) && (attr = html.match(attribute))) {
         advance(attr[0].length)
         match.attrs.push(attr)
       }
       if (end) {
+        // unary 一元的 / 比如 <br/> 匹配到 [/>, /]
         match.unarySlash = end[1]
         advance(end[0].length)
         match.end = index
+        // attrs: [Array(6)]
+        // end: 14
+        // start: 0
+        // tagName: "div"
+        // unarySlash: ""
         return match
       }
     }
@@ -242,12 +272,19 @@ export function parseHTML (html, options) {
       }
     }
 
+    // 第二个判断 是否包含 / 标签  <my-component />
     const unary = isUnaryTag(tagName) || !!unarySlash
 
     const l = match.attrs.length
     const attrs = new Array(l)
     for (let i = 0; i < l; i++) {
       const args = match.attrs[i]
+      // 0: " id="app""
+      // 1: "id"
+      // 2: "="
+      // 3: "app"
+      // 4: undefined
+      // 5: undefined
       const value = args[3] || args[4] || args[5] || ''
       const shouldDecodeNewlines = tagName === 'a' && args[1] === 'href'
         ? options.shouldDecodeNewlinesForHref
@@ -257,7 +294,8 @@ export function parseHTML (html, options) {
         value: decodeAttr(value, shouldDecodeNewlines)
       }
     }
-
+    // 非一元标签  把tag push进去栈顶
+    // lastTag保持非一元标签的最新引用
     if (!unary) {
       stack.push({ tag: tagName, lowerCasedTag: tagName.toLowerCase(), attrs: attrs })
       lastTag = tagName
@@ -274,6 +312,7 @@ export function parseHTML (html, options) {
     if (end == null) end = index
 
     // Find the closest opened tag of the same type
+    // 知道栈中与tag标签最相近的位置 pos
     if (tagName) {
       lowerCasedTagName = tagName.toLowerCase()
       for (pos = stack.length - 1; pos >= 0; pos--) {
@@ -285,7 +324,7 @@ export function parseHTML (html, options) {
       // If no tag name is provided, clean shop
       pos = 0
     }
-
+    // 没有提Tag name的话
     if (pos >= 0) {
       // Close all the open elements, up the stack
       for (let i = stack.length - 1; i >= pos; i--) {
@@ -298,6 +337,7 @@ export function parseHTML (html, options) {
           )
         }
         if (options.end) {
+          // 闭合一元缺失标签
           options.end(stack[i].tag, start, end)
         }
       }
@@ -306,10 +346,13 @@ export function parseHTML (html, options) {
       stack.length = pos
       lastTag = pos && stack[pos - 1].tag
     } else if (lowerCasedTagName === 'br') {
+    // </br> 和 </p> 标签浏览器可以将其正常解析为 <br> 以及 <p></p>，而对于 </div> 浏览器会将其忽略
       if (options.start) {
         options.start(tagName, [], true, start, end)
       }
     } else if (lowerCasedTagName === 'p') {
+      // 处理P标签
+      // options.start
       if (options.start) {
         options.start(tagName, [], false, start, end)
       }
