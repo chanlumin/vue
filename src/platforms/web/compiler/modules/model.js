@@ -22,9 +22,10 @@ import {
   addIfCondition,
   createASTElement
 } from 'compiler/parser/index'
-
+//
 function preTransformNode (el: ASTElement, options: CompilerOptions) {
   if (el.tag === 'input') {
+    // input 标签
     const map = el.attrsMap
     if (!map['v-model']) {
       return
@@ -49,6 +50,7 @@ function preTransformNode (el: ASTElement, options: CompilerOptions) {
       processFor(branch0)
       addRawAttr(branch0, 'type', 'checkbox')
       processElement(branch0, options)
+      // 标记是否已经处理过了。
       branch0.processed = true // prevent it from double-processed
       branch0.if = `(${typeBinding})==='checkbox'` + ifConditionExtra
       addIfCondition(branch0, {

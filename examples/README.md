@@ -13,3 +13,24 @@ b.__proto__.name === 'clm'
 
 
 ### html-parser ==> http://erik.eae.net/simplehtmlparser/simplehtmlparser.js
+
+
+### 小技巧 去除undefined 或者 null值
+['1', undefined, null].filter(_=>_)
+
+
+### JSON.stringfy的用处
+```javascript
+const fn1 = new Function('console.log(1)')
+const fn2 = new Function(JSON.stringify('console.log(1)'))
+// fn1 和 fn2，它们的区别在于 fn2 的参数使用了 JSON.stringify，
+// JSON.string 保证普通字符串始终作为字符串处理 
+// 等价于：
+
+const fn1 = function () {
+  console.log(1)
+}
+const fn2 = function () {
+  'console.log(1)'
+}
+```

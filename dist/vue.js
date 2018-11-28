@@ -5877,7 +5877,7 @@
   };
 
 
-  // 是否是错误的值
+  // 是否null 或者 false的值
   var isFalsyAttrValue = function (val) {
     return val == null || val === false
   };
@@ -7217,34 +7217,53 @@
 
   var validDivisionCharRE = /[\w).+\-_$\]]/;
 
+  // 解析动态绑定表达式
   function parseFilters (exp) {
+    // 在单引号内
     var inSingle = false;
+    // 双引号内
     var inDouble = false;
+    // 模板字符串
     var inTemplateString = false;
+    // 正则内
     var inRegex = false;
+    // 花括号 遇左括加1， 右花括号减一
+    // <div :key="(aa | bb)"></div> 如果有一个变量不为0的话 证明存在(
+    // 此时 | 不应被作为过滤器
     var curly = 0;
+    // 方括号
     var square = 0;
+    // 圆括号
     var paren = 0;
+    // 用来确定过滤器的位置
     var lastFilterIndex = 0;
+    // expression  parseFilters 函数的返回值
+    // filters 数组 保存所有过滤器函数名
     var c, prev, i, expression, filters;
 
     for (i = 0; i < exp.length; i++) {
       prev = c;
       c = exp.charCodeAt(i);
       if (inSingle) {
+        // ' \
         if (c === 0x27 && prev !== 0x5C) { inSingle = false; }
       } else if (inDouble) {
+        // " \
         if (c === 0x22 && prev !== 0x5C) { inDouble = false; }
       } else if (inTemplateString) {
+        // ` \
         if (c === 0x60 && prev !== 0x5C) { inTemplateString = false; }
       } else if (inRegex) {
+        // / \
         if (c === 0x2f && prev !== 0x5C) { inRegex = false; }
       } else if (
-        c === 0x7C && // pipe
+        // |
+        c === 0x7C && // pipe   0x7C => |
         exp.charCodeAt(i + 1) !== 0x7C &&
         exp.charCodeAt(i - 1) !== 0x7C &&
         !curly && !square && !paren
       ) {
+        // 初始化filter
         if (expression === undefined) {
           // first filter, end of expression
           lastFilterIndex = i + 1;
@@ -7264,6 +7283,7 @@
           case 0x7B: curly++; break                 // {
           case 0x7D: curly--; break                 // }
         }
+        // 双引号
         if (c === 0x2f) { // /
           var j = i - 1;
           var p = (void 0);
@@ -7313,10 +7333,12 @@
 
   /*  */
 
+  // console.error
   function baseWarn (msg) {
     console.error(("[Vue compiler]: " + msg));
   }
 
+  // 萃取key属性的值 把它放进数组里面 ?? 这个filter(_=> _) 有什么用意吗
   function pluckModuleFunction (
     modules,
     key
@@ -7326,22 +7348,27 @@
       : []
   }
 
+  // 添加prop值
   function addProp (el, name, value) {
     (el.props || (el.props = [])).push({ name: name, value: value });
     el.plain = false;
   }
 
+  // 往el添加attrs值
   function addAttr (el, name, value) {
     (el.attrs || (el.attrs = [])).push({ name: name, value: value });
     el.plain = false;
   }
 
   // add a raw attr (use this in preTransforms)
+  // 还没进转换前的attrsMap和attrsList的值添加
   function addRawAttr (el, name, value) {
     el.attrsMap[name] = value;
     el.attrsList.push({ name: name, value: value });
   }
 
+  // 添加指令
+  // :click.stop => 比如说 click.stop就是一个指令
   function addDirective (
     el,
     name,
@@ -7354,6 +7381,7 @@
     el.plain = false;
   }
 
+  // 添加处理函数
   function addHandler (
     el,
     name,
@@ -7435,12 +7463,19 @@
     name,
     getStatic
   ) {
+    // 从el.attrList数组中获取 动态绑定名称的值
+    // 返回attrMap中获取到的值
     var dynamicValue =
       getAndRemoveAttr(el, ':' + name) ||
       getAndRemoveAttr(el, 'v-bind:' + name);
+    // 绑定的属性值是否存在
     if (dynamicValue != null) {
+      // 解析动态绑定至
       return parseFilters(dynamicValue)
+
+      // undefined !== false  默认跳转的入口
     } else if (getStatic !== false) {
+      // 获取非绑定属性 props1="1"  JSON.stringfy(1) 返回
       var staticValue = getAndRemoveAttr(el, name);
       if (staticValue != null) {
         return JSON.stringify(staticValue)
@@ -9863,20 +9898,31 @@
   }
 
   /*  */
-
+  // 匹配@或者v-on:
   var onRE = /^@|^v-on:/;
+  // 匹配v- 或者@ 或者:
   var dirRE = /^v-|^@|^:/;
+  // 匹配 item in items 或者 item of  items  \s\S空白字符串和非空白字符串 匹配
   var forAliasRE = /([\s\S]*?)\s+(?:in|of)\s+([\s\S]*)/;
+  // 匹配 ,dfsdfk,dsdfds ?
+  // value,key,index => ,key,index key index  || value, index => ,index index
   var forIteratorRE = /,([^,\}\]]*)(?:,([^,\}\]]*))?$/;
+  // 匹配以(开头 或者以)结尾的字符串 全局匹配
   var stripParensRE = /^\(|\)$/g;
-
+  // 匹配:hello
   var argRE = /:(.*)$/;
+  //  :或者v-bind
   var bindRE = /^:|^v-bind:/;
+  // 匹配 .hello
+  // const matchs = 'v-on:click.stop'.match(modifierRE)
   var modifierRE = /\.[^.]+/g;
 
+  // console.log(he.decode('&#x26;'))  // &#x26; -> '&'
+  // he用于解析实体字符
   var decodeHTMLCached = cached(he.decode);
 
   // configurable state
+  // 平台化的选项变量
   var warn$2;
   var delimiters;
   var transforms;
@@ -9888,6 +9934,7 @@
 
 
 
+  // 创建AST的基本数据结构
   function createASTElement (
     tag,
     attrs,
@@ -9910,26 +9957,34 @@
     template,
     options
   ) {
+    // 警告
     warn$2 = options.warn || baseWarn;
-
+    // 是否是<pre>标签
     platformIsPreTag = options.isPreTag || no;
+    // 使用元素对象原生的 prop 进行绑定， 这里的 prop 指的是元素对象属性
     platformMustUseProp = options.mustUseProp || no;
+    // 获取元素(标签)的命名空间
     platformGetTagNamespace = options.getTagNamespace || no;
 
     transforms = pluckModuleFunction(options.modules, 'transformNode');
     preTransforms = pluckModuleFunction(options.modules, 'preTransformNode');
     postTransforms = pluckModuleFunction(options.modules, 'postTransformNode');
 
+    // 创建 Vue 实例对象时传递的delimiters
     delimiters = options.delimiters;
 
     var stack = [];
+    // 在编译 html字符串时是否放弃标签之间的空格 true代表放弃
     var preserveWhitespace = options.preserveWhitespace !== false;
     var root;
     var currentParent;
+    // 是否在有v-pre属性的标签中
     var inVPre = false;
+    // 是否在 pre
     var inPre = false;
     var warned = false;
 
+    // 警告只调用一次
     function warnOnce (msg) {
       if (!warned) {
         warned = true;
@@ -9937,11 +9992,12 @@
       }
     }
 
-    function closeElement (element) {
-      // check pre state
-      if (element.pre) {
-        inVPre = false;
-      }
+      function closeElement (element) {
+        // check pre state
+        if (element.pre) {
+          inVPre = false;
+        }
+        // <pre>
       if (platformIsPreTag(element.tag)) {
         inPre = false;
       }
@@ -9962,20 +10018,44 @@
       start: function start (tag, attrs, unary) {
         // check namespace.
         // inherit parent ns if there is one
+        // 获取当前的命名空间 比如 <svg><rect></rect></svg> => 获取到的命名空间都是svg
+        // rect得到的命名就是svg
         var ns = (currentParent && currentParent.ns) || platformGetTagNamespace(tag);
 
         // handle IE svg bug
         /* istanbul ignore if */
+        // <svg xmlns:feature="http://www.openplans.org/topp"></svg> IE下回渲染成
+        // <svg xmlns:NS1="" NS1:xmlns:feature="http://www.openplans.org/topp"></svg>
+        // 处理IE渲染的属性异常
         if (isIE && ns === 'svg') {
           attrs = guardIESVGBug(attrs);
         }
-
+        //  根Root
         var element = createASTElement(tag, attrs, currentParent);
+        // element = {
+        //   type: 1,
+        //   tag: 'div',
+        //   attrsList: [
+        //     {
+        //       name: 'v-for',
+        //       value: 'obj of list'
+        //     },
+        //     {
+        //       name: 'class',
+        //       value: 'box'
+        //     }
+        //   ],
+        //   attrsMap: makeAttrsMap(attrs),
+        //   parent,
+        //   children: []
+        // }
+        // namespace
         if (ns) {
           element.ns = ns;
         }
 
         if (isForbiddenTag(element) && !isServerRendering()) {
+          // 添加给禁止元素添加tag
           element.forbidden = true;
           warn$2(
             'Templates should only be responsible for mapping the state to the ' +
@@ -9990,16 +10070,22 @@
         }
 
         if (!inVPre) {
+
+          // v-pre 不需要传递属性值 用来跳过编译当前元素节点及其自子节点
           processPre(element);
           if (element.pre) {
             inVPre = true;
           }
         }
+        // 当前的标签是<pre>
+        // 1、<pre> 标签会对其所包含的 html 字符实体进行解码
+        // 2、<pre> 标签会保留 html 字符串编写时的空白
         if (platformIsPreTag(element.tag)) {
           inPre = true;
         }
         if (inVPre) {
           processRawAttrs(element);
+          // 元素还没有被解析过的话
         } else if (!element.processed) {
           // structural directives
           processFor(element);
@@ -10009,15 +10095,20 @@
           processElement(element, options);
         }
 
+        // 根节点限制
         function checkRootConstraints (el) {
           {
             if (el.tag === 'slot' || el.tag === 'template') {
+              // 根节点不能为slot或者template
+              // slot和template可能包括多个不同的 元素节点
               warnOnce(
                 "Cannot use <" + (el.tag) + "> as component root element because it may " +
                 'contain multiple nodes.'
               );
             }
+            // 根节点不能有v-for, 因为v-for一般渲染多个节点
             if (el.attrsMap.hasOwnProperty('v-for')) {
+              // 每次只提供提供一个警告给开发者, 避免开发者迷惑
               warnOnce(
                 'Cannot use v-for on stateful component root element because ' +
                 'it renders multiple elements.'
@@ -10027,18 +10118,36 @@
         }
 
         // tree management
+        // 不存在父亲节点
         if (!root) {
           root = element;
           checkRootConstraints(root);
         } else if (!stack.length) {
           // allow root elements with v-if, v-else-if and v-else
+          // element 当前元素
           if (root.if && (element.elseif || element.else)) {
             checkRootConstraints(element);
+            // 如果碰到v-if这个根节点的话
+            // 把它的子节点的所以elseif else条件表达式都放进if-condition中
+            // {
+            //   type: 1,
+            //     tag: 'div',
+            //   ifConditions: [
+            //   {
+            //     exp: 'b',
+            //     block: { type: 1, tag: 'p' /* 省略其他属性 */ }
+            //   },
+            //   {
+            //     exp: undefined,
+            //     block: { type: 1, tag: 'span' /* 省略其他属性 */ }
+            //   }
+            // ]}
             addIfCondition(root, {
               exp: element.elseif,
               block: element
             });
           } else {
+
             warnOnce(
               "Component template should contain exactly one root element. " +
               "If you are using v-if on multiple elements, " +
@@ -10046,22 +10155,30 @@
             );
           }
         }
+        // 如果当前的父亲节点纯在
         if (currentParent && !element.forbidden) {
           if (element.elseif || element.else) {
+            // 标签使用v-else-if或者v.else的话 把当前的标签添加到
+            // 前面的元素的ifConditions中
             processIfConditions(element, currentParent);
           } else if (element.slotScope) { // scoped slot
+            // 添加到父亲节点的scopedSlots中
             currentParent.plain = false;
             var name = element.slotTarget || '"default"'
             ;(currentParent.scopedSlots || (currentParent.scopedSlots = {}))[name] = element;
           } else {
+            // push进去父节点
             currentParent.children.push(element);
             element.parent = currentParent;
           }
         }
+        // 不是一元标签的话 当前的element赋值给currentParent
         if (!unary) {
           currentParent = element;
+          // 用来回退根节点
           stack.push(element);
         } else {
+          // 一元标签
           closeElement(element);
         }
       },
@@ -10136,11 +10253,23 @@
   }
 
   function processPre (el) {
+    // el = {
+    //   type: 1,
+    //   tag,
+    //   attrsList: attrs,
+    //   attrsMap: makeAttrsMap(attrs),
+    //   parent,
+    //   children: [],
+    //   pre: true
+    // }
+    // v-pre属性值 不需要添加属性值 所以getAndRemoveAttr(el, 'v-pre') => val = '' 所以成立
     if (getAndRemoveAttr(el, 'v-pre') != null) {
       el.pre = true;
     }
   }
 
+  // <div @click='hi' v-pre></div>
+  // 成立v-pre指令的元素
   function processRawAttrs (el) {
     var l = el.attrsList.length;
     if (l) {
@@ -10148,10 +10277,15 @@
       for (var i = 0; i < l; i++) {
         attrs[i] = {
           name: el.attrsList[i].name,
+          // 保证始终作为字符串来处理
           value: JSON.stringify(el.attrsList[i].value)
         };
       }
     } else if (!el.pre) {
+      //<div v-pre>
+      //  <span></span>
+      //</div>
+      // span节点添加plain节点
       // non root node in pre blocks with no attributes
       el.plain = true;
     }
@@ -10176,9 +10310,11 @@
   function processKey (el) {
     var exp = getBindingAttr(el, 'key');
     if (exp) {
+      // 获取属性值 key对应的表达式 其中 template不能 打上key这个Tag
       if (el.tag === 'template') {
         warn$2("<template> cannot be keyed. Place the key on real elements instead.");
       }
+      // 给e添加 key对应的属性值的Tag
       el.key = exp;
     }
   }
@@ -10207,14 +10343,29 @@
 
 
 
+  // (obj, key, index) in list
+  // {
+  //   for: 'list',
+  //   alias: 'obj',
+  //   iterator1: 'key',
+  //   iterator2: 'index'
+  // }
+
   function parseFor (exp) {
+    // 匹配 item in items 或者 item of  items  \s\S空白字符串和非空白字符串 匹配
+    // export const forAliasRE = /([\s\S]*?)\s+(?:in|of)\s+([\s\S]*)/
+    // 'item in items'.match(forAliasRE)
+    // ["item in items", "item", "items", index: 0, input: "item in items", groups: undefined]
     var inMatch = exp.match(forAliasRE);
     if (!inMatch) { return }
     var res = {};
     res.for = inMatch[2].trim();
+    // '(item,index) in items' => item,index
     var alias = inMatch[1].trim().replace(stripParensRE, '');
+    // => ,index or  ,key, index
     var iteratorMatch = alias.match(forIteratorRE);
     if (iteratorMatch) {
+      // value key index  key index
       res.alias = alias.replace(forIteratorRE, '').trim();
       res.iterator1 = iteratorMatch[1].trim();
       if (iteratorMatch[2]) {
@@ -10227,6 +10378,7 @@
   }
 
   function processIf (el) {
+    // 给元素节点添加if || elseif || else tag
     var exp = getAndRemoveAttr(el, 'v-if');
     if (exp) {
       el.if = exp;
@@ -10247,22 +10399,40 @@
 
   function processIfConditions (el, parent) {
     var prev = findPrevElement(parent.children);
+    // 前一一节点有if Tag的话 把当前节点添加到el.ifCondifitions数组中
     if (prev && prev.if) {
       addIfCondition(prev, {
         exp: el.elseif,
         block: el
       });
     } else {
+      // 没有配套的v-if 给出友情提示。
       warn$2(
         "v-" + (el.elseif ? ('else-if="' + el.elseif + '"') : 'else') + " " +
         "used on element <" + (el.tag) + "> without corresponding v-if."
       );
     }
   }
-
+  // <span></span>
+  // <ul>
+  //    <li>x</li>
+  //    <li>y</li>
+  // </ul>
   function findPrevElement (children) {
     var i = children.length;
+    // Parent.children
     while (i--) {
+      //<div>
+      //   <div v-if="a"></div>
+      //   aaaaa
+      //   <p v-else-if="b"></p>
+      //   bbbbb
+      //   <span v-else="c"></span>
+      // </div>
+      // 当前元素还没被添加到父亲的children数组中
+      // 所以它的前一个元素节点是<div v-if="a"></div>
+      // 只需要从后往前遍历，然后去除非元素节点
+      // 找到元素节点返回即可。
       if (children[i].type === 1) {
         return children[i]
       } else {
@@ -10272,11 +10442,12 @@
             "will be ignored."
           );
         }
+        // 去除非元素节点
         children.pop();
       }
     }
   }
-
+  // 添加ifConditions条件数组
   function addIfCondition (el, condition) {
     if (!el.ifConditions) {
       el.ifConditions = [];
@@ -10284,6 +10455,8 @@
     el.ifConditions.push(condition);
   }
 
+  // 获取v-once并且做Tag标记。
+  // 删除attrList中的v-once字段
   function processOnce (el) {
     var once$$1 = getAndRemoveAttr(el, 'v-once');
     if (once$$1 != null) {
@@ -10459,7 +10632,11 @@
       return ret
     }
   }
-
+  // {
+  //  'prev': '1000',
+  //  'next': '2000',
+  // }
+  // 返回一个Map
   function makeAttrsMap (attrs) {
     var map = {};
     for (var i = 0, l = attrs.length; i < l; i++) {
@@ -10478,6 +10655,10 @@
     return el.tag === 'script' || el.tag === 'style'
   }
 
+  // 禁止的Tag 包括style script&&  el.attrsMap不存在或者el.attrsMap.type 等于text/javascript
+  // <script></script>
+  // <script type="text/javascript"> </script>
+  // 上面两种标签都是被禁止的
   function isForbiddenTag (el) {
     return (
       el.tag === 'style' ||
@@ -10492,11 +10673,25 @@
   var ieNSPrefix = /^NS\d+:/;
 
   /* istanbul ignore next */
+  // attrs = [
+  //   {
+  //     name: 'xmlns:NS1',
+  //     value: ''
+  //   },
+  //   {
+  //     name: 'NS1:xmlns:feature',
+  //     value: 'http://www.openplans.org/topp'
+  //   }
+  // ]
   function guardIESVGBug (attrs) {
     var res = [];
     for (var i = 0; i < attrs.length; i++) {
       var attr = attrs[i];
+      // 不是xmlns:NS1的haul 直接替换NS1
+      // 如果是xmlns:NS1的话
+      // 没有任何动作 =>去除
       if (!ieNSBug.test(attr.name)) {
+        // 去掉NS1:这个字符串
         attr.name = attr.name.replace(ieNSPrefix, '');
         res.push(attr);
       }
@@ -10504,9 +10699,11 @@
     return res
   }
 
+  // v-for="items in item"
   function checkForAliasModel (el, value) {
     var _el = el;
     while (_el) {
+      //  el.for 并且 el.alias等于value
       if (_el.for && _el.alias === value) {
         warn$2(
           "<" + (el.tag) + " v-model=\"" + value + "\">: " +
@@ -10521,9 +10718,10 @@
   }
 
   /*  */
-
+  //
   function preTransformNode (el, options) {
     if (el.tag === 'input') {
+      // input 标签
       var map = el.attrsMap;
       if (!map['v-model']) {
         return
@@ -10548,6 +10746,7 @@
         processFor(branch0);
         addRawAttr(branch0, 'type', 'checkbox');
         processElement(branch0, options);
+        // 标记是否已经处理过了。
         branch0.processed = true; // prevent it from double-processed
         branch0.if = "(" + typeBinding + ")==='checkbox'" + ifConditionExtra;
         addIfCondition(branch0, {

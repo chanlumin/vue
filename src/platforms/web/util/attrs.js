@@ -41,7 +41,7 @@ export const getXlinkProp = (name: string): string => {
 }
 
 
-// 是否是错误的值
+// 是否null 或者 false的值
 export const isFalsyAttrValue = (val: any): boolean => {
   return val == null || val === false
 }

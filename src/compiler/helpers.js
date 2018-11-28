@@ -3,10 +3,12 @@
 import { emptyObject } from 'shared/util'
 import { parseFilters } from './parser/filter-parser'
 
+// console.error
 export function baseWarn (msg: string) {
   console.error(`[Vue compiler]: ${msg}`)
 }
 
+// 萃取key属性的值 把它放进数组里面 ?? 这个filter(_=> _) 有什么用意吗
 export function pluckModuleFunction<F: Function> (
   modules: ?Array<Object>,
   key: string
@@ -16,22 +18,27 @@ export function pluckModuleFunction<F: Function> (
     : []
 }
 
+// 添加prop值
 export function addProp (el: ASTElement, name: string, value: string) {
   (el.props || (el.props = [])).push({ name, value })
   el.plain = false
 }
 
+// 往el添加attrs值
 export function addAttr (el: ASTElement, name: string, value: any) {
   (el.attrs || (el.attrs = [])).push({ name, value })
   el.plain = false
 }
 
 // add a raw attr (use this in preTransforms)
+// 还没进转换前的attrsMap和attrsList的值添加
 export function addRawAttr (el: ASTElement, name: string, value: any) {
   el.attrsMap[name] = value
   el.attrsList.push({ name, value })
 }
 
+// 添加指令
+// :click.stop => 比如说 click.stop就是一个指令
 export function addDirective (
   el: ASTElement,
   name: string,
@@ -44,6 +51,7 @@ export function addDirective (
   el.plain = false
 }
 
+// 添加处理函数
 export function addHandler (
   el: ASTElement,
   name: string,
@@ -125,12 +133,19 @@ export function getBindingAttr (
   name: string,
   getStatic?: boolean
 ): ?string {
+  // 从el.attrList数组中获取 动态绑定名称的值
+  // 返回attrMap中获取到的值
   const dynamicValue =
     getAndRemoveAttr(el, ':' + name) ||
     getAndRemoveAttr(el, 'v-bind:' + name)
+  // 绑定的属性值是否存在
   if (dynamicValue != null) {
+    // 解析动态绑定至
     return parseFilters(dynamicValue)
+
+    // undefined !== false  默认跳转的入口
   } else if (getStatic !== false) {
+    // 获取非绑定属性 props1="1"  JSON.stringfy(1) 返回
     const staticValue = getAndRemoveAttr(el, name)
     if (staticValue != null) {
       return JSON.stringify(staticValue)
