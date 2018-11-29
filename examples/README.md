@@ -34,3 +34,6 @@ const fn2 = function () {
   'console.log(1)'
 }
 ```
+
+### slot的由来
+https://developer.mozilla.org/zh-CN/docs/Web/API/Element/slot

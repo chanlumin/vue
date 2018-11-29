@@ -31,6 +31,7 @@ export function parseFilters (exp: string): string {
     c = exp.charCodeAt(i)
     if (inSingle) {
       // ' \
+      // 第二个遇到单引号 并且它的前面不是'\'的话 表示已经跳出单引号了
       if (c === 0x27 && prev !== 0x5C) inSingle = false
     } else if (inDouble) {
       // " \
@@ -48,7 +49,7 @@ export function parseFilters (exp: string): string {
       exp.charCodeAt(i - 1) !== 0x7C &&
       !curly && !square && !paren
     ) {
-      // 初始化filter
+      // 管道 |  前面非|后面非|  不再() [] {} 中
       if (expression === undefined) {
         // first filter, end of expression
         lastFilterIndex = i + 1
@@ -57,6 +58,8 @@ export function parseFilters (exp: string): string {
         pushFilter()
       }
     } else {
+      // <div :key="'id'"> </div>
+      // 第一次读取的字符串
       switch (c) {
         case 0x22: inDouble = true; break         // "
         case 0x27: inSingle = true; break         // '
@@ -70,34 +73,42 @@ export function parseFilters (exp: string): string {
       }
       // 双引号
       if (c === 0x2f) { // /
+      // <div :key="/a/.test('abc')"></div>      <!-- 第一个 `/` 之前就没有字符  -->
+      // <div :key="    /a/.test('abc')"></div>  <!-- 第一个 `/` 之前都是空格  -->
+        // 缓存前一个字符
         let j = i - 1
         let p
+        // 找到/前一个字符
         // find first non-whitespace prev char
         for (; j >= 0; j--) {
           p = exp.charAt(j)
           if (p !== ' ') break
         }
+        // 前一个字符为空 或者 没有出现在  /[\w).+\-_$\]]/ 这些字符里面代表在正则里面
         if (!p || !validDivisionCharRE.test(p)) {
           inRegex = true
         }
       }
     }
   }
-
+  // <div :key="id | featId"></div>
   if (expression === undefined) {
+    // 初始化截取 :key
     expression = exp.slice(0, i).trim()
   } else if (lastFilterIndex !== 0) {
     pushFilter()
   }
 
   function pushFilter () {
+    // 第二次截取 <div :filter="id|name|hello"> </div>
     (filters || (filters = [])).push(exp.slice(lastFilterIndex, i).trim())
     lastFilterIndex = i + 1
   }
-
+  // expression=id filters = [name, hello]
   if (filters) {
     for (i = 0; i < filters.length; i++) {
       expression = wrapFilter(expression, filters[i])
+      // _f("hello")(_f("name")('id'))
     }
   }
 

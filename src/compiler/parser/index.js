@@ -416,6 +416,7 @@ export function processElement (element: ASTElement, options: CompilerOptions) {
 
   // determine whether this is a plain element after
   // removing structural attributes
+  // 标记纯元素
   element.plain = !element.key && !element.attrsList.length
 
   processRef(element)
@@ -428,6 +429,15 @@ export function processElement (element: ASTElement, options: CompilerOptions) {
 }
 
 function processKey (el) {
+  //  <div key="id"></div>
+  // 普通属性
+  //   el.key = JSON.stringify('id')
+  //   <div :key="id"></div>
+  //   绑定属性 el.key
+  //   el.key = 'id'
+  //   <div :key="id | featId"></div>
+  //   绑定属性加过滤器: el.key 属性的值为：
+  //   el.key = '_f("featId")(id)'
   const exp = getBindingAttr(el, 'key')
   if (exp) {
     // 获取属性值 key对应的表达式 其中 template不能 打上key这个Tag
@@ -591,7 +601,11 @@ function processOnce (el) {
 
 function processSlot (el) {
   if (el.tag === 'slot') {
+  // <slot></slot>
+  // <slot name="slot"></slot>
     el.slotName = getBindingAttr(el, 'name')
+      // <slot> 标签和 <template> 抽象组件，
+    // 抽象组件的不渲染真实DOM，可能会被不可预知的DOM元素替代
     if (process.env.NODE_ENV !== 'production' && el.key) {
       warn(
         `\`key\` does not work on <slot> because slots are abstract outlets ` +
@@ -600,9 +614,11 @@ function processSlot (el) {
       )
     }
   } else {
+    // scope 属性和 slot-scope
     let slotScope
     if (el.tag === 'template') {
       slotScope = getAndRemoveAttr(el, 'scope')
+      // 生产环境提示scope已经废弃, 用slot-scope替换
       /* istanbul ignore if */
       if (process.env.NODE_ENV !== 'production' && slotScope) {
         warn(
@@ -616,6 +632,7 @@ function processSlot (el) {
       el.slotScope = slotScope || getAndRemoveAttr(el, 'slot-scope')
     } else if ((slotScope = getAndRemoveAttr(el, 'slot-scope'))) {
       /* istanbul ignore if */
+      // 提示 不要将slot-scope和 v-for合在一起用。
       if (process.env.NODE_ENV !== 'production' && el.attrsMap['v-for']) {
         warn(
           `Ambiguous combined usage of slot-scope and v-for on <${el.tag}> ` +
@@ -628,9 +645,11 @@ function processSlot (el) {
     }
     const slotTarget = getBindingAttr(el, 'slot')
     if (slotTarget) {
+      // <div slot></div> =>获取到的slot是""
       el.slotTarget = slotTarget === '""' ? '"default"' : slotTarget
       // preserve slot as an attribute for native shadow DOM compat
       // only for non-scoped slots.
+      // 保留原生影子插槽 => 所以才会更换为slot-scope
       if (el.tag !== 'template' && !el.slotScope) {
         addAttr(el, 'slot', slotTarget)
       }
@@ -638,6 +657,8 @@ function processSlot (el) {
   }
 }
 
+// 处理Component
+// <div is></div> => el.component = ''
 function processComponent (el) {
   let binding
   if ((binding = getBindingAttr(el, 'is'))) {
@@ -654,6 +675,7 @@ function processAttrs (el) {
   for (i = 0, l = list.length; i < l; i++) {
     name = rawName = list[i].name
     value = list[i].value
+    // export const dirRE = /^v-|^@|^:/
     if (dirRE.test(name)) {
       // mark element as dynamic
       el.hasBindings = true
@@ -739,6 +761,7 @@ function processAttrs (el) {
   }
 }
 
+// 从当前的组件开始查找， 如果有for标签 代表当前的组件在v-for里面
 function checkInFor (el: ASTElement): boolean {
   let parent = el
   while (parent) {

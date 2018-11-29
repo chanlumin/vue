@@ -7246,6 +7246,7 @@
       c = exp.charCodeAt(i);
       if (inSingle) {
         // ' \
+        // 第二个遇到单引号 并且它的前面不是'\'的话 表示已经跳出单引号了
         if (c === 0x27 && prev !== 0x5C) { inSingle = false; }
       } else if (inDouble) {
         // " \
@@ -7263,7 +7264,7 @@
         exp.charCodeAt(i - 1) !== 0x7C &&
         !curly && !square && !paren
       ) {
-        // 初始化filter
+        // 管道 |  前面非|后面非|  不再() [] {} 中
         if (expression === undefined) {
           // first filter, end of expression
           lastFilterIndex = i + 1;
@@ -7272,6 +7273,8 @@
           pushFilter();
         }
       } else {
+        // <div :key="'id'"> </div>
+        // 第一次读取的字符串
         switch (c) {
           case 0x22: inDouble = true; break         // "
           case 0x27: inSingle = true; break         // '
@@ -7285,34 +7288,42 @@
         }
         // 双引号
         if (c === 0x2f) { // /
+        // <div :key="/a/.test('abc')"></div>      <!-- 第一个 `/` 之前就没有字符  -->
+        // <div :key="    /a/.test('abc')"></div>  <!-- 第一个 `/` 之前都是空格  -->
+          // 缓存前一个字符
           var j = i - 1;
           var p = (void 0);
+          // 找到/前一个字符
           // find first non-whitespace prev char
           for (; j >= 0; j--) {
             p = exp.charAt(j);
             if (p !== ' ') { break }
           }
+          // 前一个字符为空 或者 没有出现在  /[\w).+\-_$\]]/ 这些字符里面代表在正则里面
           if (!p || !validDivisionCharRE.test(p)) {
             inRegex = true;
           }
         }
       }
     }
-
+    // <div :key="id | featId"></div>
     if (expression === undefined) {
+      // 初始化截取 :key
       expression = exp.slice(0, i).trim();
     } else if (lastFilterIndex !== 0) {
       pushFilter();
     }
 
     function pushFilter () {
+      // 第二次截取 <div :filter="id|name|hello"> </div>
       (filters || (filters = [])).push(exp.slice(lastFilterIndex, i).trim());
       lastFilterIndex = i + 1;
     }
-
+    // expression=id filters = [name, hello]
     if (filters) {
       for (i = 0; i < filters.length; i++) {
         expression = wrapFilter(expression, filters[i]);
+        // _f("hello")(_f("name")('id'))
       }
     }
 
@@ -10296,6 +10307,7 @@
 
     // determine whether this is a plain element after
     // removing structural attributes
+    // 标记纯元素
     element.plain = !element.key && !element.attrsList.length;
 
     processRef(element);
@@ -10308,6 +10320,15 @@
   }
 
   function processKey (el) {
+    //  <div key="id"></div>
+    // 普通属性
+    //   el.key = JSON.stringify('id')
+    //   <div :key="id"></div>
+    //   绑定属性 el.key
+    //   el.key = 'id'
+    //   <div :key="id | featId"></div>
+    //   绑定属性加过滤器: el.key 属性的值为：
+    //   el.key = '_f("featId")(id)'
     var exp = getBindingAttr(el, 'key');
     if (exp) {
       // 获取属性值 key对应的表达式 其中 template不能 打上key这个Tag
@@ -10466,7 +10487,11 @@
 
   function processSlot (el) {
     if (el.tag === 'slot') {
+    // <slot></slot>
+    // <slot name="slot"></slot>
       el.slotName = getBindingAttr(el, 'name');
+        // <slot> 标签和 <template> 抽象组件，
+      // 抽象组件的不渲染真实DOM，可能会被不可预知的DOM元素替代
       if (el.key) {
         warn$2(
           "`key` does not work on <slot> because slots are abstract outlets " +
@@ -10475,9 +10500,11 @@
         );
       }
     } else {
+      // scope 属性和 slot-scope
       var slotScope;
       if (el.tag === 'template') {
         slotScope = getAndRemoveAttr(el, 'scope');
+        // 生产环境提示scope已经废弃, 用slot-scope替换
         /* istanbul ignore if */
         if (slotScope) {
           warn$2(
@@ -10491,6 +10518,7 @@
         el.slotScope = slotScope || getAndRemoveAttr(el, 'slot-scope');
       } else if ((slotScope = getAndRemoveAttr(el, 'slot-scope'))) {
         /* istanbul ignore if */
+        // 提示 不要将slot-scope和 v-for合在一起用。
         if (el.attrsMap['v-for']) {
           warn$2(
             "Ambiguous combined usage of slot-scope and v-for on <" + (el.tag) + "> " +
@@ -10503,9 +10531,11 @@
       }
       var slotTarget = getBindingAttr(el, 'slot');
       if (slotTarget) {
+        // <div slot></div> =>获取到的slot是""
         el.slotTarget = slotTarget === '""' ? '"default"' : slotTarget;
         // preserve slot as an attribute for native shadow DOM compat
         // only for non-scoped slots.
+        // 保留原生影子插槽 => 所以才会更换为slot-scope
         if (el.tag !== 'template' && !el.slotScope) {
           addAttr(el, 'slot', slotTarget);
         }
@@ -10513,6 +10543,8 @@
     }
   }
 
+  // 处理Component
+  // <div is></div> => el.component = ''
   function processComponent (el) {
     var binding;
     if ((binding = getBindingAttr(el, 'is'))) {
@@ -10529,6 +10561,7 @@
     for (i = 0, l = list.length; i < l; i++) {
       name = rawName = list[i].name;
       value = list[i].value;
+      // export const dirRE = /^v-|^@|^:/
       if (dirRE.test(name)) {
         // mark element as dynamic
         el.hasBindings = true;
@@ -10613,6 +10646,7 @@
     }
   }
 
+  // 从当前的组件开始查找， 如果有for标签 代表当前的组件在v-for里面
   function checkInFor (el) {
     var parent = el;
     while (parent) {
