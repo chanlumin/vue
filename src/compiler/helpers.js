@@ -64,6 +64,7 @@ export function addHandler (
   // warn prevent and passive modifier
   /* istanbul ignore if */
   if (
+    // 修饰符号有prevent 和 passive的话 提出警告
     process.env.NODE_ENV !== 'production' && warn &&
     modifiers.prevent && modifiers.passive
   ) {
@@ -73,19 +74,25 @@ export function addHandler (
     )
   }
 
+  // 归一 // normalzie
   // normalize click.right and click.middle since they don't actually fire
   // this is technically browser-specific, but at least for now browsers are
   // the only target envs that have right/middle clicks.
   if (name === 'click') {
+    // 鼠标右键
     if (modifiers.right) {
       name = 'contextmenu'
       delete modifiers.right
     } else if (modifiers.middle) {
+      // 利用mouseup 监听滚轮事件
       name = 'mouseup'
     }
   }
 
   // check capture modifier
+  // <div @click.once="handleClick"></div>
+  // <div ~click.once="handleClick"></div>
+
   if (modifiers.capture) {
     delete modifiers.capture
     name = '!' + name // mark the event as captured
@@ -102,12 +109,14 @@ export function addHandler (
 
   let events
   if (modifiers.native) {
+    // for in 的会遍历很多不同的属性， 此处是把不需要的属性
+    // 都去掉
     delete modifiers.native
     events = el.nativeEvents || (el.nativeEvents = {})
   } else {
     events = el.events || (el.events = {})
   }
-
+  // 添加Handle对象
   const newHandler: any = {
     value: value.trim()
   }
@@ -117,14 +126,17 @@ export function addHandler (
 
   const handlers = events[name]
   /* istanbul ignore if */
+  // 第三次进入
   if (Array.isArray(handlers)) {
     important ? handlers.unshift(newHandler) : handlers.push(newHandler)
   } else if (handlers) {
+    // 第二次
     events[name] = important ? [newHandler, handlers] : [handlers, newHandler]
   } else {
+    // 第一次
     events[name] = newHandler
   }
-
+  // 设置为非纯对象
   el.plain = false
 }
 

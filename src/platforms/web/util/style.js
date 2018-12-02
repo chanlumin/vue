@@ -2,8 +2,16 @@
 
 import { cached, extend, toObject } from 'shared/util'
 
+// <div style="color: red; background: green;"></div>
+// {
+//   color: 'red',
+//   background: 'green'
+// }
+// https://blog.csdn.net/wulex/article/details/81357085
 export const parseStyleText = cached(function (cssText) {
   const res = {}
+  //  ?1忽略() 中匹配的内容
+  // <div style="color: red; background: url(www.xxx.com?a=1&amp;copy=3);"></div>
   const listDelimiter = /;(?![^(]*\))/g
   const propertyDelimiter = /:(.+)/
   cssText.split(listDelimiter).forEach(function (item) {
@@ -27,9 +35,11 @@ function normalizeStyleData (data: VNodeData): ?Object {
 
 // normalize possible array / string values into Object
 export function normalizeStyleBinding (bindingStyle: any): ?Object {
+  // 数组的话直接 转为Object
   if (Array.isArray(bindingStyle)) {
     return toObject(bindingStyle)
   }
+  // string的话调用parseStyleText
   if (typeof bindingStyle === 'string') {
     return parseStyleText(bindingStyle)
   }

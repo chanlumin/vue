@@ -17,6 +17,8 @@ type TextParseResult = {
   tokens: Array<string | { '@binding': string }>
 }
 
+// 解析字面表达式 <div id="{{ isTrue ? 'a' : 'b' }}"></div>
+// <div :id="isTrue ? 'a' : 'b'"></div>
 export function parseText (
   text: string,
   delimiters?: [string, string]

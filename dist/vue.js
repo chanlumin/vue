@@ -7405,6 +7405,7 @@
     // warn prevent and passive modifier
     /* istanbul ignore if */
     if (
+      // 修饰符号有prevent 和 passive的话 提出警告
       warn &&
       modifiers.prevent && modifiers.passive
     ) {
@@ -7414,19 +7415,25 @@
       );
     }
 
+    // 归一 // normalzie
     // normalize click.right and click.middle since they don't actually fire
     // this is technically browser-specific, but at least for now browsers are
     // the only target envs that have right/middle clicks.
     if (name === 'click') {
+      // 鼠标右键
       if (modifiers.right) {
         name = 'contextmenu';
         delete modifiers.right;
       } else if (modifiers.middle) {
+        // 利用mouseup 监听滚轮事件
         name = 'mouseup';
       }
     }
 
     // check capture modifier
+    // <div @click.once="handleClick"></div>
+    // <div ~click.once="handleClick"></div>
+
     if (modifiers.capture) {
       delete modifiers.capture;
       name = '!' + name; // mark the event as captured
@@ -7443,12 +7450,14 @@
 
     var events;
     if (modifiers.native) {
+      // for in 的会遍历很多不同的属性， 此处是把不需要的属性
+      // 都去掉
       delete modifiers.native;
       events = el.nativeEvents || (el.nativeEvents = {});
     } else {
       events = el.events || (el.events = {});
     }
-
+    // 添加Handle对象
     var newHandler = {
       value: value.trim()
     };
@@ -7458,14 +7467,17 @@
 
     var handlers = events[name];
     /* istanbul ignore if */
+    // 第三次进入
     if (Array.isArray(handlers)) {
       important ? handlers.unshift(newHandler) : handlers.push(newHandler);
     } else if (handlers) {
+      // 第二次
       events[name] = important ? [newHandler, handlers] : [handlers, newHandler];
     } else {
+      // 第一次
       events[name] = newHandler;
     }
-
+    // 设置为非纯对象
     el.plain = false;
   }
 
@@ -8018,8 +8030,16 @@
 
   /*  */
 
+  // <div style="color: red; background: green;"></div>
+  // {
+  //   color: 'red',
+  //   background: 'green'
+  // }
+  // https://blog.csdn.net/wulex/article/details/81357085
   var parseStyleText = cached(function (cssText) {
     var res = {};
+    //  ?1忽略() 中匹配的内容
+    // <div style="color: red; background: url(www.xxx.com?a=1&amp;copy=3);"></div>
     var listDelimiter = /;(?![^(]*\))/g;
     var propertyDelimiter = /:(.+)/;
     cssText.split(listDelimiter).forEach(function (item) {
@@ -8043,9 +8063,11 @@
 
   // normalize possible array / string values into Object
   function normalizeStyleBinding (bindingStyle) {
+    // 数组的话直接 转为Object
     if (Array.isArray(bindingStyle)) {
       return toObject(bindingStyle)
     }
+    // string的话调用parseStyleText
     if (typeof bindingStyle === 'string') {
       return parseStyleText(bindingStyle)
     }
@@ -9398,6 +9420,8 @@
 
 
 
+  // 解析字面表达式 <div id="{{ isTrue ? 'a' : 'b' }}"></div>
+  // <div :id="isTrue ? 'a' : 'b'"></div>
   function parseText (
     text,
     delimiters
@@ -9441,6 +9465,10 @@
     if (staticClass) {
       var res = parseText(staticClass, options.delimiters);
       if (res) {
+
+        //  <div className="{{ isActive ? 'active' : '' }}"></div>
+        //  优先使用如下表达式子
+        //  <div :class="{ 'active': isActive }"></div>
         warn(
           "class=\"" + staticClass + "\": " +
           'Interpolation inside attributes has been removed. ' +
@@ -9449,15 +9477,19 @@
         );
       }
     }
+    // 静态class
     if (staticClass) {
       el.staticClass = JSON.stringify(staticClass);
     }
     var classBinding = getBindingAttr(el, 'class', false /* getStatic */);
     if (classBinding) {
+      // 绑定class
       el.classBinding = classBinding;
     }
   }
 
+  // 返回 "staticClass:hello'
+  // 或者  "class:bingdeing'
   function genData (el) {
     var data = '';
     if (el.staticClass) {
@@ -10204,6 +10236,7 @@
         // pop stack
         stack.length -= 1;
         currentParent = stack[stack.length - 1];
+        // 一元标签或非一元标签的结束标签时会调用 closeElement
         closeElement(element);
       },
 
@@ -10224,6 +10257,7 @@
         }
         // IE textarea placeholder bug
         /* istanbul ignore if */
+        // IE的bug textarea的placeholder中的文本会被渲染到innerHTML中
         if (isIE &&
           currentParent.tag === 'textarea' &&
           currentParent.attrsMap.placeholder === text
@@ -10231,6 +10265,7 @@
           return
         }
         var children = currentParent.children;
+        // 文本节点需要Decode 因为Vue用的是createTextNode
         text = inPre || text.trim()
           ? isTextTag(currentParent) ? text : decodeHTMLCached(text)
           // only preserve whitespace if its not right after a starting tag
@@ -10238,6 +10273,8 @@
         if (text) {
           var res;
           if (!inVPre && text !== ' ' && (res = parseText(text, delimiters))) {
+            // 含有表达式
+            // <div>我的名字是：{{ name }}</div>
             children.push({
               type: 2,
               expression: res.expression,
@@ -10252,6 +10289,7 @@
           }
         }
       },
+      // 注释节点添加一个type为3的Object
       comment: function comment (text) {
         currentParent.children.push({
           type: 3,
@@ -10557,6 +10595,8 @@
 
   function processAttrs (el) {
     var list = el.attrsList;
+    // 因为processFor已经处理for并且把它移除掉了
+    // 所以在这里已经剩下attrs了
     var i, l, name, rawName, value, modifiers, isProp;
     for (i = 0, l = list.length; i < l; i++) {
       name = rawName = list[i].name;
@@ -10568,9 +10608,12 @@
         // modifiers
         modifiers = parseModifiers(name);
         if (modifiers) {
+          // 删除.xxx
           name = name.replace(modifierRE, '');
         }
+        // export const bindRE = /^:|^v-bind:/
         if (bindRE.test(name)) { // v-bind
+          // 绑定的话就不能当做Props来处理了
           name = name.replace(bindRE, '');
           value = parseFilters(value);
           isProp = false;
@@ -10587,18 +10630,31 @@
               name = camelize(name);
               if (name === 'innerHtml') { name = 'innerHTML'; }
             }
+            // vue主动去获取浏览器的模板的时候才会
+            // 浏览器渲染属性的时候会把属性转成小写的 所以Vue一开始去获取的
+            // 属性是小写的 :viewbox="viewBox" 的时候，属性修饰 转换为大写
+            // <svg :viewBox="viewBox"></svg>
+            // <svg :viewbox="viewBox"></svg>'
             if (modifiers.camel) {
               name = camelize(name);
             }
+            // <child :some-prop.sync="value" />
+          //   <template>
+          //     <child :some-prop="value" @update:someProp="handleEvent" />
+          //  </template>
             if (modifiers.sync) {
               addHandler(
                 el,
                 ("update:" + (camelize(name))),
-                genAssignmentCode(value, "$event")
+                genAssignmentCode(value, "$event") // 返回一个字符串
               );
             }
           }
+          // isProp 该属性绑定的原生的属性
           if (isProp || (
+            // 没有使用is属性
+            // input,textarea,option,select,progress标签的 value 属性使用原生 prop 绑定（除了 type === 'button' 之外）
+            // 函数在判断的时候需要标签的名字(el.tag)，而 el.component 会在元素渲染阶段替换掉 el.tag 的值
             !el.component && platformMustUseProp(el.tag, el.attrsMap.type, name)
           )) {
             addProp(el, name, value);
@@ -10609,6 +10665,7 @@
           name = name.replace(onRE, '');
           addHandler(el, name, value, modifiers, false, warn$2);
         } else { // normal directives
+          // v- || @ || :
           name = name.replace(dirRE, '');
           // parse arg
           var argMatch = name.match(argRE);
@@ -10616,6 +10673,15 @@
           if (arg) {
             name = name.slice(0, -(arg.length + 1));
           }
+          // el.directives = [
+          //   {
+          //     name, // 指令名字
+          //     rawName, // 指令原始名字
+          //     value, // 指令的属性值
+          //     arg, // 指令的参数
+          //     modifiers // 指令的修饰符
+          //   }
+          // ]
           addDirective(el, name, rawName, value, arg, modifiers);
           if (name === 'model') {
             checkForAliasModel(el, value);
@@ -10637,6 +10703,7 @@
         addAttr(el, name, JSON.stringify(value));
         // #6887 firefox doesn't update muted state if set via attribute
         // even immediately after element creation
+        // 解决firefox的bug 添加到prop并且把prop
         if (!el.component &&
             name === 'muted' &&
             platformMustUseProp(el.tag, el.attrsMap.type, name)) {
@@ -10658,6 +10725,9 @@
     return false
   }
 
+  // ':click.stop.hello.dfs'.match(modifierRE)
+  // [".stop",".hello",".dfs"]
+  // 返回修饰对象
   function parseModifiers (name) {
     var match = name.match(modifierRE);
     if (match) {
@@ -10733,7 +10803,12 @@
     return res
   }
 
-  // v-for="items in item"
+  // v-for="item in items"
+  // v-model=item
+  // 以下为正确使用v-model的姿势
+  // <div v-for="obj of list">
+  //   <input v-model="obj.item" />
+  // </div>
   function checkForAliasModel (el, value) {
     var _el = el;
     while (_el) {
@@ -10752,7 +10827,8 @@
   }
 
   /*  */
-  //
+  //  该preTransformNode将一个绑定类型和 v-model 指令的 input 标签扩展为，
+  //  复选按钮(checkbox)、单选按钮(radio)和其他 input 标签
   function preTransformNode (el, options) {
     if (el.tag === 'input') {
       // input 标签
@@ -10762,9 +10838,12 @@
       }
 
       var typeBinding;
+      // <input v-model="val" :type="inputType" />
       if (map[':type'] || map['v-bind:type']) {
         typeBinding = getBindingAttr(el, 'type');
       }
+      // <input v-model="val" v-bind="{ type: inputType }" />
+      // 获取v-bind
       if (!map.type && !typeBinding && map['v-bind']) {
         typeBinding = "(" + (map['v-bind']) + ").type";
       }
@@ -10774,7 +10853,7 @@
         var ifConditionExtra = ifCondition ? ("&&(" + ifCondition + ")") : "";
         var hasElse = getAndRemoveAttr(el, 'v-else', true) != null;
         var elseIfCondition = getAndRemoveAttr(el, 'v-else-if', true);
-        // 1. checkbox
+        // 1. 创建checkbox按钮
         var branch0 = cloneASTElement(el);
         // process for on the main node
         processFor(branch0);
@@ -10782,6 +10861,8 @@
         processElement(branch0, options);
         // 标记是否已经处理过了。
         branch0.processed = true; // prevent it from double-processed
+        // <input v-model="val" :type="inputType" v-if="display" />
+        // '(${inputType})==='checkbox'&&display
         branch0.if = "(" + typeBinding + ")==='checkbox'" + ifConditionExtra;
         addIfCondition(branch0, {
           exp: branch0.if,
